@@ -1,8 +1,8 @@
 {
   "$schema": "https://mintlify.com/schema.json",
-  "name": "Starter Kit",
+  "name": "Gestión Web",
   "logo": {
-    "dark": "/logo/dark.svg",
+    "dark": "/logo/logo-trim.svg",
     "light": "/logo/light.svg"
   },
   "favicon": "/favicon.svg",
@@ -22,40 +22,40 @@
     }
   ],
   "topbarCtaButton": {
-    "name": "Dashboard",
-    "url": "https://dashboard.mintlify.com"
+    "name": "Gestión Web",
+    "url": "https://app.gestionweb.uy"
   },
   "tabs": [
     {
-      "name": "API Reference",
+      "name": "Referencias API",
       "url": "api-reference"
     }
   ],
   "anchors": [
     {
-      "name": "Documentation",
-      "icon": "book-open-cover",
-      "url": "https://mintlify.com/docs"
+      "name": "OctoberCMS",
+      "icon": "leaf",
+      "url": "https://docs.octobercms.com/2.x/setup/installation.html"
     },
     {
-      "name": "Community",
-      "icon": "slack",
-      "url": "https://mintlify.com/community"
+      "name": "Laravel",
+      "icon": "laravel",
+      "url": "https://laravel.com/docs/6.x/installation"
     },
     {
-      "name": "Blog",
-      "icon": "newspaper",
-      "url": "https://mintlify.com/blog"
+      "name": "Shopaholic Plugin",
+      "icon": "bag-shopping",
+      "url": "https://shopaholic.one/docs#/"
     }
   ],
   "navigation": [
     {
-      "group": "Get Started",
+      "group": "Inicio",
       "pages": ["introduction", "quickstart", "development"]
     },
     {
-      "group": "Essentials",
-      "pages": ["essentials/markdown", "essentials/code", "essentials/images", "essentials/settings", "essentials/navigation"]
+      "group": "Plataforma",
+      "pages": ["essentials/bcu", "essentials/ucfe", "essentials/console"]
     },
     {
       "group": "API Documentation",
@@ -74,5 +74,11 @@
     "twitter": "https://twitter.com/mintlify",
     "github": "https://github.com/mintlify",
     "linkedin": "https://www.linkedin.com/company/mintsearch"
-  }
+  },
+  "api": {
+    "auth": {
+      "method": "bearer"
+    }
+  },
+  "openapi": ["/api-reference/openapi.json"]
 }

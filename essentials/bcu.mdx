@@ -1,0 +1,173 @@
+---
+title: 'BCU'
+description: 'Cotización de divisas basadas en el api de BCU'
+icon: 'dollar-sign'
+---
+## Instalación
+
+```bash
+composer require planetadeleste/bcu-currency
+```
+
+## Usage
+
+La clase principal `PlanetaDelEste\BCUCurrency\Currency` tiene tres métodos estáticos, `currencies(), latest(), rate()`.
+Cada uno realiza una llamada al servicio Soap `https://cotizaciones.bcu.gub.uy/wscotizaciones/servlet/`
+
+### Obtener cotizaciones
+
+Obtener una lista de cotizaciones locales o globales
+
+```php
+$obCurrencies = \PlanetaDelEste\BCUCurrency\Currency::currencies();
+$obResponse = $obCurrencies->local();
+
+$arItems = $obResponse->getItems();
+```
+
+#### Métodos
+
+| Nombre     | Parámetros      | Devuelve             | Descripción                                              |
+|------------|-----------------|----------------------|----------------------------------------------------------|
+| `get`      | `$iGroupID` int | `CurrenciesResponse` | Cotizaciones de ambos mercados (local e internacional)   |
+| `both`     |                 | `CurrenciesResponse` | Cotizaciones de ambos mercados (local e internacional)   |
+| `global`   |                 | `CurrenciesResponse` | Cotizaciones del mercado internacional unicamente        |
+| `local`    |                 | `CurrenciesResponse` | Cotizaciones del mercado local unicamente                |
+| `getItems` |                 | `array`              | Devuelve un array de elementos como el ejemplo siguiente |
+
+#### Respuesta
+
+Class `\PlanetaDelEste\BCUCurrency\Service\CurrenciesResponse`
+
+##### Métodos
+
+| Nombre     | Parámetros | Devuelve | Descripción                                                        |
+|------------|------------|----------|--------------------------------------------------------------------|
+| `getItems` |            | `array`  | Devuelve un array de elementos `ItemRef` como el siguiente ejemplo |
+
+###### Propiedades
+
+>  \PlanetaDelEste\BCUCurrency\Service\Currencies\ItemRef
+
+| Propiedad | Valor    | Descripción                  |
+|-----------|----------|------------------------------|
+| `Codigo`  | `int`    | Código númerico de la moneda |
+| `Nombre`  | `string` | Nombre de la moneda          |
+
+```json
+[
+{
+    "Codigo": 501,
+    "Nombre": "PESO ARG.BILLETE"
+},
+{
+    "Codigo": 1001,
+    "Nombre": "REAL BILLETE"
+},
+{
+    "Codigo": 2224,
+    "Nombre": "DLS. USA CABLE"
+},
+{
+    "Codigo": 2225,
+    "Nombre": "DLS. USA BILLETE"
+},
+{
+    "Codigo": 2230,
+    "Nombre": "DLS.PROMED.FONDO"
+},
+{
+    "Codigo": 9700,
+    "Nombre": "UNIDAD PREVISIONAL"
+},
+{
+    "Codigo": 9800,
+    "Nombre": "UNIDAD INDEXADA"
+},
+{
+    "Codigo": 9900,
+    "Nombre": "UNIDAD REAJUSTAB"
+}
+]
+```
+
+### Obtener el último cierre de cotización
+
+Devuelve la fecha del último cierre de cotización
+
+#### Métodos
+
+| Nombre | Parámetros | Devuelve                                             | Descripción |
+|--------|------------|------------------------------------------------------|-------------|
+| `get`  |            | `\PlanetaDelEste\BCUCurrency\Service\LatestResponse` |             |
+
+
+
+#### Uso
+
+```php
+$obLatest = \PlanetaDelEste\BCUCurrency\Currency::latest();
+$obResponse = $obLatest->get();
+
+$sDate = $obResponse->getFecha();
+print_r($sDate);
+```
+
+#### Respuesta
+
+| Name       | Params | Return   | Description              |
+|------------|--------|----------|--------------------------|
+| `getFecha` |        | `string` | Fecha en formato `Y-m-d` |
+
+`2021-06-17`
+
+### Obtener cotización
+
+Obtener datos de cotización de una moneda en una fecha
+
+<Info>
+    > **NAMESPACE** `\PlanetaDelEste\BCUCurrency\Service`
+    > **CLASS** `Rate`
+</Info>
+
+```php
+$obLatest = \PlanetaDelEste\BCUCurrency\Currency::latest()->get();
+$obRate = \PlanetaDelEste\BCUCurrency\Currency::rate();
+$obLocalResponse = $obRate->local()->from($obLatest->getFecha())->usd()->get();
+$obGlobalResponse = $obRate->global()->from($obLatest->getFecha())->usd()->get();
+
+
+print_r($obLocalResponse->getItems());
+print_r($obGlobalResponse->getItems());
+```
+
+#### Métodos
+
+| Nombre   | Parámetros     | Devuelve | Descripción                                                 |
+|----------|----------------|----------|-------------------------------------------------------------|
+| `local`  |                | `Rate`   | Devuelve cotizaciones locales                               |
+| `global` |                | `Rate`   | Devuelve cotizaciones globales                              |
+| `both`   |                | `Rate`   | Obtiene ambas cotizaciones                                  |
+| `from`   | `string`       | `Rate`   | Configura la fecha de inicio en formato `Y-m-d`             |
+| `to`     | `string`       | `Rate`   | Configura la fecha de fin en formato `Y-m-d`                |
+| `ars`    | `bool`         | `Rate`   | Agrega la moneda argentina (ARS) a la colección de monedas. |
+| `brl`    | `bool`         | `Rate`   | Agrega la moneda de brazil (BRL) a la colección de monedas. |
+| `usd`    | `bool`         | `Rate`   | Agrega el dolar (USD) a la colección de monedas.            |
+| `eur`    | `bool`         | `Rate`   | Agrega el euro (EUR) a la colección de monedas.             |
+| `get`    | `RateResponse` |          |                                                             |
+
+#### Respuesta
+
+Devuelve un array de elementos `\PlanetaDelEste\BCUCurrency\Service\RateResponse\ItemRef`
+
+| Propiedad       | Valor    | Descripción                    |
+|-----------------|----------|--------------------------------|
+| `Fecha`         | `string` | Fecha de la cotización (Y-m-d) |
+| `Moneda`        | `int`    | Identificador de la moneda     |
+| `Nombre`        | `string` | Nombre de la moneda            |
+| `CodigoISO`     | `string` | código ISO                     |
+| `Emisor`        | `string` | País emisor                    |
+| `TCC`           | `float`  | Valor bajo de la cotización    |
+| `TCV`           | `float`  | Valor alto de la cotización    |
+| `ArbAct`        | `float`  | Valor de arbitrage             |
+| `FormaArbitrar` | `int`    | Formato de arbitrage           |

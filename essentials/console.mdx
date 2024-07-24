@@ -1,0 +1,28 @@
+---
+title: 'Comandos'
+description: 'Comandos de consola'
+icon: 'terminal'
+---
+
+## Borrar modelos de empresas
+
+`gw:clean.company`
+
+| Parámetro        | Tipo      | Valor                                     | Descripción                                                               |
+|------------------|-----------|-------------------------------------------|---------------------------------------------------------------------------|
+| `model`          | Argumento | invoice, customer, product, contract, all | Tipo de modelo a borrar                                                   |
+| `--company`      | Opción    | Número                                    | Identificador de la empresa (obligatorio)                                 |
+| `--id`           | Opción    | Número                                    | Identificador del modelo a borrar (opcional)                              |
+| `--movement`     | Opción    | Número                                    | Identificador de tipo de movimiento (solo para model=invoice) (opcional)  |
+| `--not-received` | Opción    | Número (1,0)                              | Filtra comprobantes por no recibidos (solo para model=invoice) (opcional) |
+| `--received`     | Opción    | Número (1,0)                              | Filtra comprobantes por recibidos (solo para model=invoice) (opcional)    |
+
+## Copia empresa de producción a devel
+
+`gw:copy.company`
+
+| Parámetro      | Tipo      | Valor        | Descripción                               |
+|----------------|-----------|--------------|-------------------------------------------|
+| `company`      | Argumento | Número       | Identificador de la empresa (obligatorio) |
+| `--not-update` | Opción    | Número (1,0) | Solo crea nuevos registros (opcional)     |
+
