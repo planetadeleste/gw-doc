@@ -7,6 +7,7 @@ icon: 'terminal'
 ## Borrar modelos de empresas
 
 `gw:clean.company`
+Si la empresa fue migrada, los registros borrados serán reseteados de la migración para volver a migrarlos.
 
 | Parámetro        | Tipo      | Valor                                     | Descripción                                                               |
 |------------------|-----------|-------------------------------------------|---------------------------------------------------------------------------|
@@ -14,15 +15,79 @@ icon: 'terminal'
 | `--company`      | Opción    | Número                                    | Identificador de la empresa (obligatorio)                                 |
 | `--id`           | Opción    | Número                                    | Identificador del modelo a borrar (opcional)                              |
 | `--movement`     | Opción    | Número                                    | Identificador de tipo de movimiento (solo para model=invoice) (opcional)  |
-| `--not-received` | Opción    | Número (1,0)                              | Filtra comprobantes por no recibidos (solo para model=invoice) (opcional) |
-| `--received`     | Opción    | Número (1,0)                              | Filtra comprobantes por recibidos (solo para model=invoice) (opcional)    |
+| `--not-received` | Opción    | Booleano                                  | Filtra comprobantes por no recibidos (solo para model=invoice) (opcional) |
+| `--received`     | Opción    | Booleano                                  | Filtra comprobantes por recibidos (solo para model=invoice) (opcional)    |
 
 ## Copia empresa de producción a devel
 
 `gw:copy.company`
 
-| Parámetro      | Tipo      | Valor        | Descripción                               |
-|----------------|-----------|--------------|-------------------------------------------|
-| `company`      | Argumento | Número       | Identificador de la empresa (obligatorio) |
-| `--not-update` | Opción    | Número (1,0) | Solo crea nuevos registros (opcional)     |
+| Parámetro      | Tipo      | Valor    | Descripción                               |
+|----------------|-----------|----------|-------------------------------------------|
+| `company`      | Argumento | Número   | Identificador de la empresa (obligatorio) |
+| `--not-update` | Opción    | Booleano | Solo crea nuevos registros (opcional)     |
+
+## Crear modelos planos de comprobantes (Flat Invoices)
+
+`gw:create.flat.invoices`
+
+| Parámetro    | Tipo   | Valor    | Descripción                                                      |
+|--------------|--------|----------|------------------------------------------------------------------|
+| `--company`  | Opción | Número   | Identificador de la empresa                                      |
+| `--id`       | Opción | Número   | Identificador del comprobante                                    |
+| `--currency` | Opción | Número   | Identificador de moneda                                          |
+| `--missing`  | Opción | Booleano | Solo crea nuevos registros                                       |
+| `--set-xml`  | Opción | Booleano | Asigna XML a los comprobantes, según el generado por la librería |
+
+## Crea las tablas y disparadores de procedimientos de reportes
+
+`gw:create.report.procedures`
+
+| Parámetro           | Tipo   | Valor    | Descripción                                 |
+|---------------------|--------|----------|---------------------------------------------|
+| `--grant`           | Opción | Booleano | Da permisos totales al usuario actual de DB |
+| `--remove-triggers` | Opción | Booleano | Solo elimina los dispatradores              |
+| `--create-views`    | Opción | Booleano | Crea las vistas en la base de datos         |
+
+## Sincronización de monedas
+
+`gw:currency.sync`
+
+| Parámetro  | Tipo      | Valor  | Descripción                                        |
+|------------|-----------|--------|----------------------------------------------------|
+| `currency` | Argumento | Cadena | Código de la moneda a sincronizar. USD por omision |
+| `--from`   | Opción    | Cadena | Fecha de inicio en formato `Y-m-d` (opcional)      |
+| `--to`     | Opción    | Cadena | Fecha final en formato `Y-m-d` (opcional)          |
+
+## Iniciar migración
+
+`gw:migration.start`
+
+| Parámetro   | Tipo      | Valor  | Descripción                              |
+|-------------|-----------|--------|------------------------------------------|
+| `migration` | Argumento | Número | Identificador de la migración a iniciar. |
+
+## Acciones sobre tareas de migración
+
+`gw:migration.task`
+
+| Parámetro          | Tipo      | Valor                | Descripción                                            |
+|--------------------|-----------|----------------------|--------------------------------------------------------|
+| `module`           | Argumento | Cadena               | Identificador del módulo de migración.                 |
+| `--action`         | Opción    | clear, reset, remove | Acción sobre la tarea.                                 |
+| `--rut`            | Opción    | Número               | Documento RUT de la empresa.                           |
+| `--clear-data`     | Opción    | Booleano             | Elimina los datos de la migración.                     |
+| `--clear-relation` | Opción    | Booleano             | Elimina las relaciones de la migración.                |
+| `--value`          | Opción    | Cadena               | Identificador del modelo en la base de datos a migrar. |
+| `--remove-related` | Opción    | Booleano             | Elimina los modelos relacionados de la migración.      |
+
+### Acciones sobre tareas de migración
+#### Limpieza `clear`
+Reinicia el estado de las tareas a "en espera" (`waiting`), solo para tareas con estado distinto de "completado" (`completed`).
+
+#### Reiniciar `reset`
+Reinicia el estado de todas las tareas a "en espera" (`waiting`).
+
+#### Eliminar `remove`
+Elimina todas las tareas.
 
