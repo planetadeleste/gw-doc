@@ -1,0 +1,266 @@
+---
+title: "Modelos de Datos"
+description: "Documentación completa de todos los modelos del plugin PlanetaDelEste.GW"
+---
+
+# Modelos de Datos
+
+Los modelos de datos del plugin PlanetaDelEste.GW están diseñados para proporcionar una estructura robusta y escalable para la gestión empresarial. Cada modelo implementa validaciones, relaciones y métodos específicos para su dominio.
+
+## Estructura General
+
+Todos los modelos del plugin extienden las funcionalidades base de OctoberCMS e implementan:
+
+- **Validación**: Reglas de validación automática
+- **Relaciones**: Definición de relaciones entre entidades
+- **Scopes**: Filtros de consulta reutilizables
+- **Accessors/Mutators**: Transformación de datos
+- **Events**: Eventos del ciclo de vida del modelo
+- **Auditoría**: Registro de cambios (donde aplique)
+- **Cache**: Optimización de consultas frecuentes
+
+## Categorías de Modelos
+
+### Facturación y Comercial
+
+<CardGroup cols={2}>
+  <Card title="Invoice" href="/modelos/facturacion/invoice">
+    Modelo principal para facturas y comprobantes
+  </Card>
+  <Card title="InvoicePosition" href="/modelos/facturacion/invoice-position">
+    Líneas de detalle de facturas
+  </Card>
+  <Card title="InvoiceType" href="/modelos/facturacion/invoice-type">
+    Tipos de comprobantes fiscales
+  </Card>
+  <Card title="InvoiceMovementType" href="/modelos/facturacion/invoice-movement-type">
+    Tipos de movimientos comerciales
+  </Card>
+</CardGroup>
+
+### Contabilidad
+
+<CardGroup cols={2}>
+  <Card title="AccountingEntry" href="/modelos/contabilidad/accounting-entry">
+    Asientos contables principales
+  </Card>
+  <Card title="Account" href="/modelos/contabilidad/account">
+    Plan de cuentas contables
+  </Card>
+  <Card title="AccountType" href="/modelos/contabilidad/account-type">
+    Tipos de cuentas contables
+  </Card>
+  <Card title="Balance" href="/modelos/contabilidad/balance">
+    Saldos contables por período
+  </Card>
+</CardGroup>
+
+### Inventario y Productos
+
+<CardGroup cols={2}>
+  <Card title="ProductGW" href="/modelos/inventario/product-gw">
+    Productos del sistema
+  </Card>
+  <Card title="PriceList" href="/modelos/inventario/price-list">
+    Listas de precios
+  </Card>
+  <Card title="Warehouse" href="/modelos/inventario/warehouse">
+    Almacenes y ubicaciones
+  </Card>
+</CardGroup>
+
+### Clientes y Proveedores
+
+<CardGroup cols={2}>
+  <Card title="Customer" href="/modelos/clientes/customer">
+    Clientes del sistema
+  </Card>
+  <Card title="CustomerConfig" href="/modelos/clientes/customer-config">
+    Configuración específica de clientes
+  </Card>
+  <Card title="CustomerBalance" href="/modelos/clientes/customer-balance">
+    Saldos de cuenta corriente
+  </Card>
+</CardGroup>
+
+### Configuración y Maestros
+
+<CardGroup cols={2}>
+  <Card title="Company" href="/modelos/configuracion/company">
+    Empresas del sistema
+  </Card>
+  <Card title="Branch" href="/modelos/configuracion/branch">
+    Sucursales de empresas
+  </Card>
+  <Card title="Bank" href="/modelos/configuracion/bank">
+    Entidades bancarias
+  </Card>
+  <Card title="Currency" href="/modelos/configuracion/currency">
+    Monedas y tipos de cambio
+  </Card>
+</CardGroup>
+
+## Convenciones de Nomenclatura
+
+### Nombres de Tabla
+```sql
+-- Singular, snake_case
+invoices
+invoice_positions
+accounting_entries
+customer_balances
+```
+
+### Nombres de Modelo
+```php
+// PascalCase, singular
+Invoice
+InvoicePosition
+AccountingEntry
+CustomerBalance
+```
+
+### Campos Comunes
+
+Todos los modelos incluyen campos estándar:
+
+```php
+// Timestamps automáticos
+$timestamps = true;
+
+// Campos comunes
+created_at      // Fecha de creación
+updated_at      // Fecha de última modificación
+deleted_at      // Eliminación lógica (soft delete)
+
+// Campos de empresa/sucursal
+company_id      // ID de empresa
+branch_id       // ID de sucursal (opcional)
+```
+
+## Traits Utilizados
+
+### Validación
+```php
+use October\Rain\Database\Traits\Validation;
+
+// Reglas de validación
+public $rules = [
+    'name' => 'required|string|max:255',
+    'email' => 'email|nullable'
+];
+```
+
+### Auditoría
+```php
+use OwenIt\Auditing\Auditable;
+use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
+
+// Registro automático de cambios
+protected $auditInclude = ['name', 'status'];
+```
+
+### Cache de Consultas
+```php
+use Rennokki\QueryCache\Traits\QueryCacheable;
+
+// Cache automático de consultas
+public $cacheFor = 3600; // 1 hora
+```
+
+### Scopes Personalizados
+```php
+use PlanetaDelEste\GW\Traits\Scopes\CompanyField;
+use PlanetaDelEste\GW\Traits\Scopes\BranchField;
+
+// Filtros automáticos por empresa/sucursal
+```
+
+## Relaciones Estándar
+
+### BelongsTo (Pertenece a)
+```php
+public function company(): BelongsTo
+{
+    return $this->belongsTo(Company::class);
+}
+```
+
+### HasMany (Tiene muchos)
+```php
+public function positions(): HasMany
+{
+    return $this->hasMany(InvoicePosition::class);
+}
+```
+
+### BelongsToMany (Muchos a muchos)
+```php
+public function customers(): BelongsToMany
+{
+    return $this->belongsToMany(Customer::class)
+        ->withPivot(['active', 'priority'])
+        ->withTimestamps();
+}
+```
+
+## Eventos del Modelo
+
+Los modelos implementan eventos para automatizar procesos:
+
+```php
+// Antes de crear
+public function beforeCreate()
+{
+    $this->generateCode();
+}
+
+// Después de guardar
+public function afterSave()
+{
+    $this->updateRelatedRecords();
+}
+
+// Antes de eliminar
+public function beforeDelete()
+{
+    $this->validateDeletion();
+}
+```
+
+## Configuración de Validación
+
+### Reglas Básicas
+```php
+public $rules = [
+    'code' => 'required|unique:table_name',
+    'name' => 'required|string|max:255',
+    'amount' => 'required|numeric|min:0'
+];
+```
+
+### Mensajes Personalizados
+```php
+public $customMessages = [
+    'code.unique' => 'El código ya existe en el sistema',
+    'amount.min' => 'El monto debe ser mayor a cero'
+];
+```
+
+## Mejores Prácticas
+
+<Tip>
+**Optimización**: Usa eager loading para evitar el problema N+1 en consultas con relaciones.
+</Tip>
+
+<Warning>
+**Validación**: Siempre define reglas de validación para campos críticos.
+</Warning>
+
+<Info>
+**Auditoría**: Habilita auditoría en modelos que requieren trazabilidad.
+</Info>
+
+---
+
+En las siguientes secciones encontrarás la documentación detallada de cada modelo, incluyendo sus propiedades, relaciones, métodos y ejemplos de uso.

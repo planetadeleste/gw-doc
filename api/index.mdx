@@ -1,0 +1,496 @@
+---
+title: "API REST"
+description: "Documentación completa de la API REST del plugin PlanetaDelEste.GW"
+---
+
+# API REST
+
+La API REST del plugin PlanetaDelEste.GW proporciona acceso programático a todas las funcionalidades del sistema. Está construida siguiendo los principios RESTful y utiliza autenticación JWT.
+
+## Información General
+
+- **Base URL**: `https://tu-dominio.com/api/v1/gw`
+- **Protocolo**: HTTPS
+- **Formato**: JSON
+- **Autenticación**: JWT (JSON Web Token)
+- **Rate Limiting**: 600 requests por minuto
+
+## Autenticación
+
+### Obtener Token JWT
+```http
+POST /api/v1/auth/login
+Content-Type: application/json
+
+{
+    "email": "usuario@empresa.com",
+    "password": "contraseña"
+}
+```
+
+### Respuesta
+```json
+{
+    "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+    "token_type": "bearer",
+    "expires_in": 3600,
+    "user": {
+        "id": 1,
+        "name": "Usuario",
+        "email": "usuario@empresa.com"
+    }
+}
+```
+
+### Usar Token
+```http
+GET /api/v1/gw/invoices
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+Accept: application/json
+```
+
+## Estructura de la API
+
+### Endpoints Principales
+
+<CardGroup cols={2}>
+  <Card title="Facturas" href="/api/endpoints/invoices">
+    Gestión completa de facturas y comprobantes
+  </Card>
+  <Card title="Clientes" href="/api/endpoints/customers">
+    Administración de clientes y proveedores
+  </Card>
+  <Card title="Productos" href="/api/endpoints/products">
+    Catálogo de productos y servicios
+  </Card>
+  <Card title="Contabilidad" href="/api/endpoints/accounting">
+    Asientos contables y cuentas
+  </Card>
+</CardGroup>
+
+### Recursos Disponibles
+
+| Recurso | Endpoint | Descripción |
+|---------|----------|-------------|
+| **Facturas** | `/invoices` | Facturas y comprobantes |
+| **Posiciones** | `/invoice-positions` | Líneas de detalle de facturas |
+| **Clientes** | `/customers` | Clientes y proveedores |
+| **Productos** | `/products` | Catálogo de productos |
+| **Empresas** | `/companies` | Empresas del sistema |
+| **Sucursales** | `/branches` | Sucursales de empresas |
+| **Bancos** | `/banks` | Entidades bancarias |
+| **Monedas** | `/currencies` | Monedas y cotizaciones |
+
+## Operaciones CRUD
+
+### Listar Recursos
+```http
+GET /api/v1/gw/invoices
+```
+
+**Parámetros de consulta:**
+- `page`: Número de página (default: 1)
+- `limit`: Registros por página (default: 20, max: 100)
+- `sort`: Campo para ordenar (default: id)
+- `order`: Dirección (asc/desc, default: desc)
+- `search`: Término de búsqueda
+- `filter[campo]`: Filtros específicos
+
+**Ejemplo:**
+```http
+GET /api/v1/gw/invoices?page=2&limit=50&sort=created_at&order=desc&search=factura&filter[status]=active
+```
+
+### Obtener Recurso Específico
+```http
+GET /api/v1/gw/invoices/{id}
+```
+
+**Parámetros:**
+- `include`: Relaciones a incluir (ej: `positions,customer`)
+
+**Ejemplo:**
+```http
+GET /api/v1/gw/invoices/123?include=positions,customer,invoice_type
+```
+
+### Crear Recurso
+```http
+POST /api/v1/gw/invoices
+Content-Type: application/json
+
+{
+    "company_id": 1,
+    "customer_id": 100,
+    "invoice_type_id": 1,
+    "currency_id": 1,
+    "order_serial": "A",
+    "description": "Nueva factura",
+    "positions": [
+        {
+            "item_id": 50,
+            "item_type": "Product",
+            "name": "Producto XYZ",
+            "quantity": 2,
+            "price": 100.00
+        }
+    ]
+}
+```
+
+### Actualizar Recurso
+```http
+PUT /api/v1/gw/invoices/{id}
+Content-Type: application/json
+
+{
+    "description": "Factura actualizada",
+    "due_date": "2024-12-31"
+}
+```
+
+### Eliminar Recurso
+```http
+DELETE /api/v1/gw/invoices/{id}
+```
+
+## Respuestas de la API
+
+### Estructura Exitosa
+```json
+{
+    "success": true,
+    "data": {
+        "id": 123,
+        "company_id": 1,
+        "customer_id": 100,
+        "order_serial": "A",
+        "order_number": 1001,
+        "created_at": "2024-01-15T10:30:00Z",
+        "updated_at": "2024-01-15T10:30:00Z"
+    },
+    "message": "Factura creada exitosamente"
+}
+```
+
+### Listado con Paginación
+```json
+{
+    "success": true,
+    "data": [
+        {
+            "id": 123,
+            "order_serial": "A",
+            "order_number": 1001
+        }
+    ],
+    "meta": {
+        "current_page": 1,
+        "total": 150,
+        "per_page": 20,
+        "last_page": 8,
+        "from": 1,
+        "to": 20
+    },
+    "links": {
+        "first": "/api/v1/gw/invoices?page=1",
+        "last": "/api/v1/gw/invoices?page=8",
+        "prev": null,
+        "next": "/api/v1/gw/invoices?page=2"
+    }
+}
+```
+
+### Respuesta de Error
+```json
+{
+    "success": false,
+    "message": "Error de validación",
+    "errors": {
+        "customer_id": ["El campo cliente es requerido"],
+        "invoice_type_id": ["El tipo de factura es inválido"]
+    },
+    "code": 422
+}
+```
+
+## Códigos de Estado HTTP
+
+| Código | Significado | Descripción |
+|--------|-------------|-------------|
+| `200` | OK | Operación exitosa |
+| `201` | Created | Recurso creado exitosamente |
+| `204` | No Content | Operación exitosa sin contenido |
+| `400` | Bad Request | Petición malformada |
+| `401` | Unauthorized | Token inválido o expirado |
+| `403` | Forbidden | Sin permisos para la operación |
+| `404` | Not Found | Recurso no encontrado |
+| `422` | Unprocessable Entity | Error de validación |
+| `429` | Too Many Requests | Límite de rate exceeded |
+| `500` | Internal Server Error | Error del servidor |
+
+## Endpoints Especializados
+
+### Firmar Factura Electrónicamente
+```http
+POST /api/v1/gw/invoices/{id}/sign
+```
+
+### Anular Factura
+```http
+POST /api/v1/gw/invoices/{id}/cancel
+Content-Type: application/json
+
+{
+    "reason": "Error en los datos"
+}
+```
+
+### Obtener PDF de Factura
+```http
+GET /api/v1/gw/invoices/{id}/pdf
+Accept: application/pdf
+```
+
+### Saldos de Cliente
+```http
+GET /api/v1/gw/customers/{id}/balance
+```
+
+### Reportes
+```http
+GET /api/v1/gw/reports/sales
+GET /api/v1/gw/reports/accounting
+GET /api/v1/gw/reports/inventory
+```
+
+## Filtros y Búsqueda
+
+### Filtros por Campo
+```http
+GET /api/v1/gw/invoices?filter[status]=signed&filter[customer_id]=100
+```
+
+### Filtros por Rango de Fechas
+```http
+GET /api/v1/gw/invoices?filter[created_at][from]=2024-01-01&filter[created_at][to]=2024-01-31
+```
+
+### Búsqueda Global
+```http
+GET /api/v1/gw/invoices?search=factura 001
+```
+
+### Búsqueda por Campos Específicos
+```http
+GET /api/v1/gw/customers?search_fields[name]=Juan&search_fields[email]=gmail.com
+```
+
+## Incluir Relaciones
+
+### Sintaxis Básica
+```http
+GET /api/v1/gw/invoices?include=customer,positions,invoice_type
+```
+
+### Relaciones Anidadas
+```http
+GET /api/v1/gw/invoices?include=customer.branch,positions.item
+```
+
+### Relaciones Condicionales
+```http
+GET /api/v1/gw/invoices?include=positions:id,name,quantity,price
+```
+
+## Rate Limiting
+
+### Límites por Default
+- **Authenticated**: 600 requests por minuto
+- **Guest**: 60 requests por minuto
+
+### Headers de Rate Limit
+```http
+X-RateLimit-Limit: 600
+X-RateLimit-Remaining: 599
+X-RateLimit-Reset: 1640995200
+```
+
+### Respuesta cuando se excede el límite
+```json
+{
+    "success": false,
+    "message": "Too Many Attempts.",
+    "code": 429
+}
+```
+
+## Webhook Integration
+
+### Configurar Webhook
+```http
+POST /api/v1/gw/webhooks
+Content-Type: application/json
+
+{
+    "url": "https://mi-sistema.com/webhook",
+    "events": ["invoice.signed", "invoice.cancelled"],
+    "secret": "mi-secreto-webhook"
+}
+```
+
+### Eventos Disponibles
+- `invoice.created`
+- `invoice.updated`
+- `invoice.signed`
+- `invoice.cancelled`
+- `customer.created`
+- `customer.updated`
+- `balance.updated`
+
+## SDK y Clients
+
+### JavaScript/Node.js
+```javascript
+const GWApi = require('@planetadeleste/gw-api-client');
+
+const api = new GWApi({
+    baseURL: 'https://tu-dominio.com/api/v1/gw',
+    token: 'tu-jwt-token'
+});
+
+// Crear factura
+const invoice = await api.invoices.create({
+    company_id: 1,
+    customer_id: 100,
+    invoice_type_id: 1
+});
+
+// Listar facturas
+const invoices = await api.invoices.list({
+    page: 1,
+    limit: 20,
+    include: 'customer,positions'
+});
+```
+
+### PHP
+```php
+use PlanetaDelEste\GWApiClient\Client;
+
+$client = new Client([
+    'base_url' => 'https://tu-dominio.com/api/v1/gw',
+    'token' => 'tu-jwt-token'
+]);
+
+// Crear cliente
+$customer = $client->customers()->create([
+    'name' => 'Nuevo Cliente',
+    'email' => 'cliente@email.com',
+    'company_id' => 1
+]);
+
+// Obtener facturas
+$invoices = $client->invoices()->list([
+    'filter' => ['status' => 'signed'],
+    'include' => 'customer,positions'
+]);
+```
+
+### cURL Examples
+
+#### Crear Factura
+```bash
+curl -X POST https://tu-dominio.com/api/v1/gw/invoices \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "company_id": 1,
+    "customer_id": 100,
+    "invoice_type_id": 1,
+    "currency_id": 1,
+    "order_serial": "A",
+    "description": "Nueva factura API"
+  }'
+```
+
+#### Listar con Filtros
+```bash
+curl -G https://tu-dominio.com/api/v1/gw/invoices \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d "filter[status]=signed" \
+  -d "include=customer,positions" \
+  -d "limit=50"
+```
+
+## Testing
+
+### Postman Collection
+El plugin incluye una colección de Postman con todos los endpoints:
+
+```json
+{
+    "info": {
+        "name": "PlanetaDelEste GW API",
+        "version": "1.0.0"
+    },
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{jwt_token}}"
+            }
+        ]
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "https://tu-dominio.com/api/v1/gw"
+        }
+    ]
+}
+```
+
+### PHPUnit Tests
+```php
+class InvoiceApiTest extends TestCase
+{
+    public function test_can_create_invoice()
+    {
+        $response = $this->postJson('/api/v1/gw/invoices', [
+            'company_id' => 1,
+            'customer_id' => 100,
+            'invoice_type_id' => 1
+        ]);
+
+        $response->assertStatus(201)
+                 ->assertJsonStructure([
+                     'success',
+                     'data' => [
+                         'id',
+                         'order_serial',
+                         'order_number'
+                     ]
+                 ]);
+    }
+}
+```
+
+## Mejores Prácticas
+
+<Tip>
+**Paginación**: Siempre usa paginación para listados grandes.
+</Tip>
+
+<Warning>
+**Rate Limiting**: Implementa retry logic para manejar límites de rate.
+</Warning>
+
+<Info>
+**Caching**: Cachea respuestas que no cambian frecuentemente.
+</Info>
+
+---
+
+La API REST proporciona acceso completo a todas las funcionalidades del sistema de manera programática, facilitando la integración con sistemas externos.

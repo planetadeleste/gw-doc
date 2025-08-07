@@ -1,0 +1,393 @@
+---
+title: "Controladores"
+description: "Documentación de los controladores del backend del plugin PlanetaDelEste.GW"
+---
+
+# Controladores
+
+Los controladores del plugin PlanetaDelEste.GW proporcionan la interfaz de administración en el backend de OctoberCMS. Cada controlador maneja las operaciones CRUD y funcionalidades específicas de su dominio.
+
+## Estructura General
+
+Todos los controladores siguen las convenciones de OctoberCMS y extienden la clase base `Backend\Classes\Controller`:
+
+```php
+use Backend\Classes\Controller;
+use BackendMenu;
+
+class ExampleController extends Controller
+{
+    public $implement = [
+        'Backend\Behaviors\ListController',
+        'Backend\Behaviors\FormController'
+    ];
+
+    public $listConfig = 'config_list.yaml';
+    public $formConfig = 'config_form.yaml';
+
+    public function __construct()
+    {
+        parent::__construct();
+        BackendMenu::setContext('PlanetaDelEste.GW', 'menu-item');
+    }
+}
+```
+
+## Behaviors Implementados
+
+### ListController
+Proporciona funcionalidad de listado con:
+- Filtros avanzados
+- Búsqueda
+- Paginación
+- Ordenamiento
+- Exportación
+
+### FormController
+Permite creación y edición con:
+- Validación automática
+- Relaciones
+- Campos personalizados
+- Eventos del formulario
+
+### ImportExportController
+Para controladores que manejan importación/exportación:
+- Importación desde CSV/Excel
+- Exportación a múltiples formatos
+- Validación de datos
+- Procesamiento por lotes
+
+## Controladores Principales
+
+### Facturación y Comercial
+
+<CardGroup cols={2}>
+  <Card title="Tipos de Comprobante" href="/controladores/facturacion/invoice-types">
+    Gestión de tipos fiscales de comprobantes
+  </Card>
+  <Card title="Tipos de Movimiento" href="/controladores/facturacion/invoice-movement-types">
+    Configuración de movimientos comerciales
+  </Card>
+  <Card title="Métodos de Pago" href="/controladores/facturacion/payment-methods">
+    Administración de formas de pago
+  </Card>
+  <Card title="Condiciones de Pago" href="/controladores/facturacion/payment-terms">
+    Gestión de términos de pago
+  </Card>
+</CardGroup>
+
+### Contabilidad
+
+<CardGroup cols={2}>
+  <Card title="Tipos de Cuenta" href="/controladores/contabilidad/account-types">
+    Clasificación de cuentas contables
+  </Card>
+  <Card title="Tipos de Movimiento Contable" href="/controladores/contabilidad/accounting-movement-types">
+    Configuración de asientos automáticos
+  </Card>
+  <Card title="Tipos de Impuestos" href="/controladores/contabilidad/tax-types">
+    Gestión de impuestos y alícuotas
+  </Card>
+</CardGroup>
+
+### Configuración
+
+<CardGroup cols={2}>
+  <Card title="Bancos" href="/controladores/configuracion/banks">
+    Administración de entidades bancarias
+  </Card>
+  <Card title="Cotizaciones" href="/controladores/configuracion/currency-rates">
+    Gestión de tipos de cambio
+  </Card>
+  <Card title="Listas de Precios" href="/controladores/configuracion/price-lists">
+    Administración de precios por cliente
+  </Card>
+  <Card title="Productos GW" href="/controladores/configuracion/products-gw">
+    Configuración específica de productos
+  </Card>
+</CardGroup>
+
+### Administración
+
+<CardGroup cols={2}>
+  <Card title="Módulos" href="/controladores/administracion/modules">
+    Gestión de módulos del sistema
+  </Card>
+  <Card title="Versiones" href="/controladores/administracion/releases">
+    Control de versiones y cambios
+  </Card>
+  <Card title="Logs de Email" href="/controladores/administracion/mail-logs">
+    Registro de envíos de email
+  </Card>
+  <Card title="Monitor de Migración" href="/controladores/administracion/migration-monitors">
+    Seguimiento de procesos de migración
+  </Card>
+</CardGroup>
+
+## Configuraciones Comunes
+
+### config_list.yaml
+```yaml
+title: Lista de Elementos
+modelClass: PlanetaDelEste\GW\Models\Example
+list: $/planetadeleste/gw/models/example/columns.yaml
+recordUrl: example/update/:id
+noRecordsMessage: No hay elementos disponibles
+recordsPerPage: 20
+showPageNumbers: true
+toolbar:
+    buttons: list_toolbar
+    search:
+        prompt: Buscar elementos
+filter: $/planetadeleste/gw/models/example/scopes.yaml
+```
+
+### config_form.yaml
+```yaml
+name: Formulario de Elemento
+form: $/planetadeleste/gw/models/example/fields.yaml
+modelClass: PlanetaDelEste\GW\Models\Example
+defaultRedirect: planetadeleste/gw/examples
+create:
+    redirect: planetadeleste/gw/examples/update/:id
+    redirectClose: planetadeleste/gw/examples
+update:
+    redirect: planetadeleste/gw/examples
+    redirectClose: planetadeleste/gw/examples
+```
+
+## Permisos y Seguridad
+
+### Definición de Permisos
+```php
+// En plugin.yaml
+permissions:
+    gw-menu-examples:
+        label: 'Gestionar ejemplos'
+        tab: 'GW'
+```
+
+### Verificación en Controlador
+```php
+public function __construct()
+{
+    parent::__construct();
+
+    // Verificar permisos
+    $this->requiredPermissions = ['gw-menu-examples'];
+
+    // Establecer contexto del menú
+    BackendMenu::setContext('PlanetaDelEste.GW', 'gw-menu-main', 'gw-menu-examples');
+}
+```
+
+## Métodos Personalizados Comunes
+
+### Filtros por Empresa
+```php
+public function listExtendQuery($query)
+{
+    // Filtrar por empresa del usuario logueado
+    if ($companyId = $this->getCurrentCompanyId()) {
+        $query->where('company_id', $companyId);
+    }
+}
+
+protected function getCurrentCompanyId(): ?int
+{
+    // Lógica para obtener la empresa actual
+    return session('current_company_id');
+}
+```
+
+### Validaciones Personalizadas
+```php
+public function formValidate($model, $form)
+{
+    // Validaciones específicas del controlador
+    $rules = [
+        'code' => 'required|unique:table_name,code,' . $model->id,
+        'name' => 'required|string|max:255'
+    ];
+
+    $validator = Validator::make($form->getSaveData(), $rules);
+
+    if ($validator->fails()) {
+        throw new ValidationException($validator);
+    }
+}
+```
+
+### Acciones Personalizadas
+```php
+public function onCustomAction()
+{
+    // Validar permisos
+    if (!$this->user->hasPermission('gw-menu-examples.custom_action')) {
+        throw new ForbiddenException();
+    }
+
+    // Procesar acción
+    $selectedIds = post('checked');
+    foreach ($selectedIds as $id) {
+        $model = ExampleModel::find($id);
+        $model->performCustomAction();
+    }
+
+    Flash::success('Acción ejecutada correctamente');
+    return $this->listRefresh();
+}
+```
+
+## AJAX Handlers
+
+### Autocompletado
+```php
+public function onSearchItems()
+{
+    $term = input('term');
+    $items = ExampleModel::where('name', 'like', "%{$term}%")
+        ->limit(10)
+        ->get(['id', 'name']);
+
+    return $items->map(function ($item) {
+        return [
+            'id' => $item->id,
+            'text' => $item->name
+        ];
+    });
+}
+```
+
+### Carga Dinámica
+```php
+public function onLoadRelatedData()
+{
+    $parentId = input('parent_id');
+    $children = ChildModel::where('parent_id', $parentId)->get();
+
+    return [
+        'options' => $children->pluck('name', 'id')->toArray()
+    ];
+}
+```
+
+## Configuración de Filtros
+
+### scopes.yaml
+```yaml
+scopes:
+    active:
+        label: Estado
+        modelClass: PlanetaDelEste\GW\Models\Example
+        conditions: active = true
+        default: 1
+
+    company:
+        label: Empresa
+        modelClass: PlanetaDelEste\GW\Models\Company
+        nameFrom: name
+        conditions: company_id in (:filtered)
+        modelScope: filterByCompany
+
+    date_range:
+        label: Rango de fechas
+        type: daterange
+        conditions: created_at >= ':after' AND created_at <= ':before'
+```
+
+## Toolbar Personalizado
+
+### list_toolbar.htm
+```html
+<div data-control="toolbar">
+    <!-- Botón de crear -->
+    <a
+        href="<?= Backend::url('planetadeleste/gw/examples/create') ?>"
+        class="btn btn-primary oc-icon-plus">
+        Crear Nuevo
+    </a>
+
+    <!-- Botón de importar -->
+    <a
+        href="<?= Backend::url('planetadeleste/gw/examples/import') ?>"
+        class="btn btn-default oc-icon-upload">
+        Importar
+    </a>
+
+    <!-- Botón personalizado -->
+    <button
+        class="btn btn-secondary"
+        data-request="onCustomAction"
+        data-request-confirm="¿Está seguro?"
+        data-list-checked-trigger
+        data-list-checked-request>
+        Acción Personalizada
+    </button>
+</div>
+```
+
+## Ejemplos de Implementación
+
+### Controlador Básico
+```php
+<?php namespace PlanetaDelEste\GW\Controllers;
+
+use Backend\Classes\Controller;
+use BackendMenu;
+
+class Examples extends Controller
+{
+    public $implement = [
+        'Backend\Behaviors\ListController',
+        'Backend\Behaviors\FormController',
+        'Backend\Behaviors\ImportExportController'
+    ];
+
+    public $listConfig = 'config_list.yaml';
+    public $formConfig = 'config_form.yaml';
+    public $importExportConfig = 'config_import_export.yaml';
+
+    public $requiredPermissions = ['gw-menu-examples'];
+
+    public function __construct()
+    {
+        parent::__construct();
+        BackendMenu::setContext('PlanetaDelEste.GW', 'gw-menu-main', 'gw-menu-examples');
+    }
+
+    public function formBeforeSave($model)
+    {
+        // Establecer empresa actual
+        if (!$model->company_id) {
+            $model->company_id = $this->getCurrentCompanyId();
+        }
+    }
+
+    public function listExtendQuery($query)
+    {
+        // Filtrar por empresa
+        if ($companyId = $this->getCurrentCompanyId()) {
+            $query->where('company_id', $companyId);
+        }
+    }
+}
+```
+
+## Mejores Prácticas
+
+<Tip>
+**Seguridad**: Siempre verifica permisos antes de ejecutar acciones sensibles.
+</Tip>
+
+<Warning>
+**Validación**: Implementa validaciones tanto en el modelo como en el controlador.
+</Warning>
+
+<Info>
+**Performance**: Usa eager loading en consultas que incluyen relaciones.
+</Info>
+
+---
+
+Los controladores son la capa de presentación del sistema y deben mantener la lógica de negocio en los modelos correspondientes.

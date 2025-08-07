@@ -17,8 +17,8 @@
   },
   "topbarLinks": [
     {
-      "name": "Support",
-      "url": "mailto:hi@mintlify.com"
+      "name": "Soporte",
+      "url": "mailto:soporte@g9.com.uy"
     }
   ],
   "topbarCtaButton": {
@@ -29,6 +29,18 @@
     {
       "name": "Referencias API",
       "url": "api-reference"
+    },
+    {
+      "name": "Modelos",
+      "url": "modelos"
+    },
+    {
+      "name": "API",
+      "url": "api"
+    },
+    {
+      "name": "Comandos",
+      "url": "comandos"
     }
   ],
   "anchors": [
@@ -67,6 +79,191 @@
         "api-reference/endpoint/get",
         "api-reference/endpoint/create",
         "api-reference/endpoint/delete"
+      ]
+    },
+    {
+      "group": "Inicio",
+      "pages": [
+        "index",
+        "instalacion",
+        "configuracion-inicial"
+      ]
+    },
+    {
+      "group": "Modelos de Datos",
+      "pages": [
+        "modelos/index",
+        {
+          "group": "Facturación",
+          "pages": [
+            "modelos/facturacion/invoice",
+            "modelos/facturacion/invoice-position",
+            "modelos/facturacion/invoice-type",
+            "modelos/facturacion/invoice-movement-type"
+          ]
+        },
+        {
+          "group": "Contabilidad",
+          "pages": [
+            "modelos/contabilidad/accounting-entry",
+            "modelos/contabilidad/account",
+            "modelos/contabilidad/account-type",
+            "modelos/contabilidad/balance"
+          ]
+        },
+        {
+          "group": "Clientes",
+          "pages": [
+            "modelos/clientes/customer",
+            "modelos/clientes/customer-config",
+            "modelos/clientes/customer-balance"
+          ]
+        },
+        {
+          "group": "Configuración",
+          "pages": [
+            "modelos/configuracion/company",
+            "modelos/configuracion/branch",
+            "modelos/configuracion/bank",
+            "modelos/configuracion/currency"
+          ]
+        }
+      ]
+    },
+    {
+      "group": "Controladores",
+      "pages": [
+        "controladores/index",
+        {
+          "group": "Facturación",
+          "pages": [
+            "controladores/facturacion/invoice-types",
+            "controladores/facturacion/invoice-movement-types",
+            "controladores/facturacion/payment-methods",
+            "controladores/facturacion/payment-terms"
+          ]
+        },
+        {
+          "group": "Contabilidad",
+          "pages": [
+            "controladores/contabilidad/account-types",
+            "controladores/contabilidad/accounting-movement-types",
+            "controladores/contabilidad/tax-types"
+          ]
+        },
+        {
+          "group": "Configuración",
+          "pages": [
+            "controladores/configuracion/banks",
+            "controladores/configuracion/currency-rates",
+            "controladores/configuracion/price-lists",
+            "controladores/configuracion/products-gw"
+          ]
+        },
+        {
+          "group": "Administración",
+          "pages": [
+            "controladores/administracion/modules",
+            "controladores/administracion/releases",
+            "controladores/administracion/mail-logs",
+            "controladores/administracion/migration-monitors"
+          ]
+        }
+      ]
+    },
+    {
+      "group": "Componentes",
+      "pages": [
+        "componentes/index",
+        "componentes/invoice-label-list"
+      ]
+    },
+    {
+      "group": "Comandos de Consola",
+      "pages": [
+        "comandos/index",
+        {
+          "group": "Gestión de Saldos",
+          "pages": [
+            "comandos/saldos/update-balance",
+            "comandos/saldos/recalculate-balance"
+          ]
+        },
+        {
+          "group": "Migración de Datos",
+          "pages": [
+            "comandos/migracion/migrate-from-pgsql",
+            "comandos/migracion/migration-start",
+            "comandos/migracion/migration-task",
+            "comandos/migracion/migration-validate"
+          ]
+        },
+        {
+          "group": "Gestión de Facturas",
+          "pages": [
+            "comandos/facturas/create-flat-invoices",
+            "comandos/facturas/invoices-remove",
+            "comandos/facturas/update-invoice-status",
+            "comandos/facturas/xml-to-invoice"
+          ]
+        },
+        {
+          "group": "Mantenimiento",
+          "pages": [
+            "comandos/mantenimiento/clear",
+            "comandos/mantenimiento/clean-company",
+            "comandos/mantenimiento/copy-company",
+            "comandos/mantenimiento/update-indexes"
+          ]
+        },
+        {
+          "group": "Sincronización",
+          "pages": [
+            "comandos/sincronizacion/currency-sync",
+            "comandos/sincronizacion/csv-to-db",
+            "comandos/sincronizacion/sync-productlist-offers"
+          ]
+        }
+      ]
+    },
+    {
+      "group": "API REST",
+      "pages": [
+        "api/index",
+        "api/autenticacion",
+        {
+          "group": "Endpoints",
+          "pages": [
+            "api/endpoints/invoices",
+            "api/endpoints/customers",
+            "api/endpoints/products",
+            "api/endpoints/accounting"
+          ]
+        },
+        "api/webhooks",
+        "api/sdk"
+      ]
+    },
+    {
+      "group": "Configuración",
+      "pages": [
+        "configuracion/index",
+        "configuracion/empresa",
+        "configuracion/facturacion-electronica",
+        "configuracion/base-datos",
+        "configuracion/cache-performance",
+        "configuracion/seguridad"
+      ]
+    },
+    {
+      "group": "Guías",
+      "pages": [
+        "guias/primeros-pasos",
+        "guias/crear-factura",
+        "guias/firma-electronica",
+        "guias/integracion-api",
+        "guias/migracion-datos",
+        "guias/troubleshooting"
       ]
     }
   ],

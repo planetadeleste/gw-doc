@@ -1,0 +1,346 @@
+---
+title: "Comando gw:update.balance"
+description: "Actualización masiva de saldos de clientes y cuentas por cobrar"
+---
+
+# Comando gw:update.balance
+
+El comando `gw:update.balance` es uno de los más importantes del sistema, encargado de actualizar los saldos de clientes y cuentas por cobrar basándose en las facturas firmadas electrónicamente.
+
+## Información General
+
+- **Comando**: `gw:update.balance`
+- **Clase**: `PlanetaDelEste\GW\Console\UpdateBalance`
+- **Propósito**: Actualización masiva de saldos contables
+- **Optimizado para**: Grandes volúmenes de datos
+
+## Sintaxis
+
+```bash
+php artisan gw:update.balance [company] [opciones]
+```
+
+### Argumentos
+
+| Argumento | Tipo | Descripción |
+|-----------|------|-------------|
+| `company` | int (opcional) | ID de la empresa a procesar |
+
+### Opciones
+
+| Opción | Valor por Defecto | Descripción |
+|--------|-------------------|-------------|
+| `--id` | - | ID específico de factura a procesar |
+| `--customer` | - | ID de cliente específico para filtrar |
+| `--chunk-size` | 500 | Cantidad de registros por lote |
+| `--memory-limit` | - | Límite de memoria para el proceso |
+
+## Funcionamiento
+
+### 1. Algoritmo de Procesamiento
+
+El comando utiliza una estrategia híbrida de **cursor + chunk** para optimizar memoria y velocidad:
+
+```php
+// Cursor para lazy loading (eficiente en memoria)
+$query->cursor()
+    // Chunk para procesamiento en lotes (eficiente en velocidad)
+    ->chunk($chunkSize)
+    ->each(function ($chunk) {
+        foreach ($chunk as $invoice) {
+            $this->updateInvoiceBalance($invoice);
+        }
+
+        // Liberación de memoria entre lotes
+        gc_collect_cycles();
+    });
+```
+
+### 2. Filtros Aplicados
+
+El comando procesa únicamente facturas que cumplan:
+
+- ✅ **Firmadas electrónicamente** (`sign_at IS NOT NULL`)
+- ✅ **No rechazadas** (`status != 'rejected'`)
+- ✅ **Con tipo de movimiento** (`invoice_movement_type_id IS NOT NULL`)
+- ✅ **Ordenadas por fecha** (`ORDER BY sign_at ASC`)
+
+### 3. Proceso de Actualización
+
+Para cada factura procesada:
+
+1. **Limpia saldos existentes** (si es procesamiento completo)
+2. **Calcula nuevos saldos** usando `BalanceHelper`
+3. **Actualiza registros** de balance
+4. **Registra actividad** en logs
+
+## Ejemplos de Uso
+
+### Actualización Completa
+```bash
+# Procesar todas las empresas
+php artisan gw:update.balance
+
+# Mostrar progreso detallado
+php artisan gw:update.balance -v
+```
+
+### Empresa Específica
+```bash
+# Procesar empresa ID 1
+php artisan gw:update.balance 1
+
+# Con configuración personalizada
+php artisan gw:update.balance 1 --chunk-size=200 --memory-limit=1G
+```
+
+### Filtros Específicos
+```bash
+# Cliente específico
+php artisan gw:update.balance --customer=100
+
+# Factura específica (útil para debugging)
+php artisan gw:update.balance --id=12345
+
+# Combinando filtros
+php artisan gw:update.balance 1 --customer=100 --chunk-size=50
+```
+
+### Configuración para Recursos Limitados
+```bash
+# Configuración conservadora
+php artisan gw:update.balance --chunk-size=25 --memory-limit=128M
+
+# Para servidores con pocos recursos
+php artisan gw:update.balance --chunk-size=10 --memory-limit=64M
+```
+
+## Optimizaciones de Performance
+
+### Configuración de Memoria
+```bash
+# Configuraciones recomendadas por entorno
+
+# Desarrollo local
+--memory-limit=512M
+
+# Servidor pequeño
+--memory-limit=256M --chunk-size=100
+
+# Servidor grande
+--memory-limit=2G --chunk-size=1000
+
+# Producción crítica
+--memory-limit=4G --chunk-size=2000
+```
+
+### Tamaño de Lote Óptimo
+
+| Volumen de Facturas | Chunk Size Recomendado | Memoria Sugerida |
+|---------------------|------------------------|------------------|
+| < 10,000 | 500 (default) | 512M |
+| 10,000 - 50,000 | 300-500 | 1G |
+| 50,000 - 100,000 | 200-300 | 1-2G |
+| > 100,000 | 100-200 | 2G+ |
+
+### Garbage Collection
+```php
+// Activado automáticamente en el comando
+gc_enable();
+
+// Ejecutado después de cada lote
+gc_collect_cycles();
+
+// Pausa mínima para no saturar
+usleep(1000); // 1ms
+```
+
+## Monitoreo y Logging
+
+### Salida del Comando
+```
+Processing 15,432 invoices for 3 companies
+Memory limit: 1G, Chunk size: 200 (cursor + chunk hybrid)
+
+Update invoice balances for Company ID 1
+ 14240/14240 [████████████████████████████] 100%
+
+Update invoice balances for Company ID 2
+ 1150/1150 [████████████████████████████] 100%
+
+Update invoice balances for Company ID 3
+ 42/42 [████████████████████████████] 100%
+
+Balance update completed successfully
+```
+
+### Información de Sistema
+```bash
+# Ver uso de memoria durante ejecución
+php artisan gw:update.balance -vv
+
+# Ejemplo de salida
+Memory current: 45MB
+Memory peak: 78MB
+Processing time: 5m 32s
+```
+
+### Logs Generados
+```php
+// En logs/laravel.log
+[2024-01-15 10:30:00] local.INFO: Balance update started
+[2024-01-15 10:30:01] local.INFO: Processing company 1 (10,000 invoices)
+[2024-01-15 10:32:15] local.INFO: Company 1 completed successfully
+[2024-01-15 10:35:30] local.INFO: Balance update completed (15,432 invoices processed)
+```
+
+## Manejo de Errores
+
+### Errores Comunes
+
+#### Empresa No Encontrada
+```
+Error: Company not found
+```
+**Solución**: Verificar que el ID de empresa existe.
+
+#### Memoria Insuficiente
+```
+Fatal error: Allowed memory size exhausted
+```
+**Solución**: Aumentar `--memory-limit` o reducir `--chunk-size`.
+
+#### Factura Inválida
+```
+Error processing invoice ID 12345: Invalid movement type
+```
+**Solución**: El comando continúa con las siguientes facturas.
+
+### Recuperación de Errores
+```bash
+# Ver último error detallado
+tail -f storage/logs/laravel.log | grep -i error
+
+# Reprocesar desde punto específico
+php artisan gw:update.balance --id=12345
+
+# Modo debugging
+php artisan gw:update.balance 1 --customer=100 -vvv
+```
+
+## Programación Automática
+
+### En Kernel.php
+```php
+protected function schedule(Schedule $schedule)
+{
+    // Actualización diaria a las 2 AM
+    $schedule->command('gw:update.balance')
+        ->dailyAt('02:00')
+        ->withoutOverlapping(120) // Timeout 2 horas
+        ->appendOutputTo(storage_path('logs/balance-update.log'))
+        ->emailOutputOnFailure('admin@empresa.com');
+
+    // Actualización conservadora para producción
+    $schedule->command('gw:update.balance --chunk-size=100 --memory-limit=512M')
+        ->daily()
+        ->environments(['production']);
+}
+```
+
+### Cron Manual
+```bash
+# Crontab entry
+0 2 * * * cd /path/to/project && php artisan gw:update.balance >> /var/log/balance-update.log 2>&1
+```
+
+## Tasks de VS Code
+
+El workspace incluye tasks predefinidas:
+
+### Task: Update Balance (Normal)
+```json
+{
+    "label": "Update Balance (as laradock)",
+    "type": "shell",
+    "command": "sudo",
+    "args": ["-u", "laradock", "php", "/var/www/gw.app/artisan", "gw:update.balance"]
+}
+```
+
+### Task: Update Balance (Conservativo)
+```json
+{
+    "label": "Update Balance Conservative (as laradock)",
+    "type": "shell",
+    "command": "sudo",
+    "args": ["-u", "laradock", "php", "/var/www/gw.app/artisan", "gw:update.balance", "--chunk-size=25", "--memory-limit=128M"]
+}
+```
+
+### Task: Update Balance (Test)
+```json
+{
+    "label": "Update Balance Test (as laradock)",
+    "type": "shell",
+    "command": "sudo",
+    "args": ["-u", "laradock", "php", "/var/www/gw.app/artisan", "gw:update.balance", "--chunk-size=5", "--memory-limit=64M"]
+}
+```
+
+## Consideraciones Especiales
+
+<Warning>
+**Bloqueo de Transacciones**: El comando puede bloquear tablas durante la ejecución. Evitar ejecutar en horarios de alta actividad.
+</Warning>
+
+<Info>
+**Orden de Procesamiento**: Las facturas se procesan cronológicamente por fecha de firma para mantener consistencia contable.
+</Info>
+
+<Tip>
+**Optimización**: Para bases de datos muy grandes, considera ejecutar por empresa individual en paralelo.
+</Tip>
+
+### Verificación Post-Ejecución
+
+```bash
+# Verificar integridad de saldos
+php artisan gw:balance.validate
+
+# Comparar saldos antes/después
+php artisan gw:balance.compare --before=backup.sql
+
+# Generar reporte de saldos
+php artisan gw:balance.report --company=1
+```
+
+## Troubleshooting
+
+### Diagnóstico Rápido
+```bash
+# Ver estado actual
+php artisan gw:balance.status
+
+# Verificar facturas problemáticas
+php artisan gw:invoices.validate --company=1
+
+# Limpiar cache relacionado
+php artisan cache:clear
+php artisan gw:clear
+```
+
+### Performance Tuning
+```bash
+# Benchmark con diferentes configuraciones
+time php artisan gw:update.balance 1 --chunk-size=100
+time php artisan gw:update.balance 1 --chunk-size=500
+time php artisan gw:update.balance 1 --chunk-size=1000
+
+# Profiling de memoria
+php artisan gw:update.balance 1 --chunk-size=200 -vv | grep Memory
+```
+
+---
+
+El comando `gw:update.balance` es crítico para la integridad financiera del sistema. Su ejecución regular y monitoreo son fundamentales para mantener los saldos actualizados.

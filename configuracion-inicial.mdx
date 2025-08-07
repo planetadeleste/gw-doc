@@ -1,0 +1,532 @@
+---
+title: "Configuración Inicial"
+description: "Pasos esenciales para configurar el plugin después de la instalación"
+---
+
+# Configuración Inicial
+
+Después de instalar el plugin PlanetaDelEste.GW, es necesario realizar algunas configuraciones básicas para comenzar a operar el sistema correctamente.
+
+## Lista de Verificación
+
+<Steps>
+  <Step title="Configurar Empresa Principal">
+    Establecer los datos básicos de tu empresa
+  </Step>
+  <Step title="Configurar Tipos de Comprobante">
+    Definir los tipos fiscales que utilizarás
+  </Step>
+  <Step title="Configurar Plan de Cuentas">
+    Establecer la estructura contable básica
+  </Step>
+  <Step title="Configurar Monedas y Cotizaciones">
+    Definir las monedas y tipos de cambio
+  </Step>
+  <Step title="Configurar Usuarios y Permisos">
+    Establecer roles y accesos del sistema
+  </Step>
+  <Step title="Configurar Facturación Electrónica">
+    Habilitar firma digital (si aplica)
+  </Step>
+</Steps>
+
+## 1. Configuración de la Empresa Principal
+
+### Acceder a la Configuración
+
+1. Ingresa al backend: `https://tu-dominio.com/backend`
+2. Ve a **GW > Empresas**
+3. Haz clic en **Nueva Empresa**
+
+### Datos Básicos Requeridos
+
+<CardGroup cols={2}>
+  <Card title="Información Fiscal" icon="receipt">
+    - RUT/CUIT/NIT de la empresa
+    - Razón social completa
+    - Nombre comercial
+    - Domicilio fiscal
+  </Card>
+  <Card title="Información de Contacto" icon="phone">
+    - Teléfono principal
+    - Email de contacto
+    - Sitio web
+    - Redes sociales
+  </Card>
+</CardGroup>
+
+### Formulario de Empresa
+
+```javascript
+// Ejemplo de datos básicos
+{
+  "name": "Mi Empresa S.A.",
+  "commercial_name": "Mi Empresa",
+  "rut": "123456789012",
+  "address": "Av. Principal 123",
+  "city": "Montevideo",
+  "country": "Uruguay",
+  "phone": "+598 2 123 4567",
+  "email": "contacto@miempresa.com",
+  "website": "https://miempresa.com"
+}
+```
+
+### Configuraciones Específicas
+
+#### Configuración Fiscal
+- **Condición ante impuestos**: Responsable Inscripto / Exento
+- **Actividad económica principal**
+- **Fecha de inicio de actividades**
+- **Período fiscal**: Enero-Diciembre / Julio-Junio
+
+#### Configuración Contable
+- **Moneda base**: Peso Uruguayo (UYU) / Dólar (USD)
+- **Método de valuación**: FIFO / LIFO / Promedio
+- **Cierre de ejercicio**: 31/12 / 30/06
+
+## 2. Configuración de Tipos de Comprobante
+
+### Tipos Básicos Requeridos
+
+Navega a **GW > Tipos de Comprobante** y configura:
+
+<Tabs>
+  <Tab title="Facturas de Venta">
+    ```json
+    {
+      "code": "101",
+      "name": "Factura de Contado",
+      "serial": "A",
+      "type": "sale",
+      "electronic": true,
+      "tax_included": true
+    }
+    ```
+  </Tab>
+
+  <Tab title="Facturas de Compra">
+    ```json
+    {
+      "code": "201",
+      "name": "Factura de Compra",
+      "serial": "M",
+      "type": "purchase",
+      "electronic": false,
+      "tax_included": true
+    }
+    ```
+  </Tab>
+
+  <Tab title="Notas de Crédito">
+    ```json
+    {
+      "code": "102",
+      "name": "Nota de Crédito",
+      "serial": "A",
+      "type": "credit_note",
+      "electronic": true,
+      "reference_required": true
+    }
+    ```
+  </Tab>
+
+  <Tab title="Notas de Débito">
+    ```json
+    {
+      "code": "103",
+      "name": "Nota de Débito",
+      "serial": "A",
+      "type": "debit_note",
+      "electronic": true,
+      "reference_required": true
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Configuración por País
+
+#### Uruguay (CFE)
+- **Factura de Contado**: Código 101, Serie A
+- **Factura de Crédito**: Código 111, Serie A
+- **Nota de Crédito**: Código 102, Serie A
+- **Nota de Débito**: Código 103, Serie A
+- **e-Ticket**: Código 121, Serie A
+
+#### Argentina (AFIP)
+- **Factura A**: Código 001, IVA Responsable Inscripto
+- **Factura B**: Código 006, Consumidor Final
+- **Factura C**: Código 011, IVA Exento
+- **Nota de Crédito A**: Código 003
+- **Nota de Débito A**: Código 002
+
+## 3. Configuración de Tipos de Movimiento
+
+Ve a **GW > Tipos de Movimiento de Comprobante**:
+
+### Movimientos de Venta
+
+```json
+{
+  "name": "Venta de Productos",
+  "code": "VENTA",
+  "type": "sale",
+  "affects_stock": true,
+  "stock_operation": "decrease",
+  "affects_balance": true,
+  "balance_type": "debit"
+}
+```
+
+### Movimientos de Compra
+
+```json
+{
+  "name": "Compra de Mercadería",
+  "code": "COMPRA",
+  "type": "purchase",
+  "affects_stock": true,
+  "stock_operation": "increase",
+  "affects_balance": true,
+  "balance_type": "credit"
+}
+```
+
+## 4. Configuración Contable
+
+### Plan de Cuentas Básico
+
+Ve a **GW > Tipos de Cuenta** y configura:
+
+<Accordion>
+  <AccordionItem title="Activos">
+    - **1.1.01** - Caja
+    - **1.1.02** - Banco
+    - **1.2.01** - Clientes
+    - **1.3.01** - Stock de Mercaderías
+  </AccordionItem>
+
+  <AccordionItem title="Pasivos">
+    - **2.1.01** - Proveedores
+    - **2.2.01** - IVA a Pagar
+    - **2.3.01** - Sueldos a Pagar
+  </AccordionItem>
+
+  <AccordionItem title="Patrimonio">
+    - **3.1.01** - Capital
+    - **3.2.01** - Resultados Acumulados
+  </AccordionItem>
+
+  <AccordionItem title="Ingresos">
+    - **4.1.01** - Ventas
+    - **4.2.01** - Ingresos Financieros
+  </AccordionItem>
+
+  <AccordionItem title="Egresos">
+    - **5.1.01** - Costo de Ventas
+    - **5.2.01** - Gastos Administrativos
+    - **5.3.01** - Gastos Comerciales
+  </AccordionItem>
+</Accordion>
+
+### Configuración de Impuestos
+
+Ve a **GW > Tipos de Impuestos**:
+
+#### Uruguay - IVA
+```json
+{
+  "name": "IVA 22%",
+  "code": "IVA_22",
+  "rate": 22.00,
+  "type": "percentage",
+  "included_in_price": true,
+  "account_id": "cuenta_iva_a_pagar"
+}
+```
+
+#### Argentina - IVA
+```json
+{
+  "name": "IVA 21%",
+  "code": "IVA_21",
+  "rate": 21.00,
+  "type": "percentage",
+  "included_in_price": false,
+  "account_id": "cuenta_iva_df"
+}
+```
+
+## 5. Configuración de Monedas
+
+Ve a **GW > Cotizaciones**:
+
+### Moneda Base
+```json
+{
+  "code": "UYU",
+  "name": "Peso Uruguayo",
+  "symbol": "$",
+  "is_default": true,
+  "rate": 1.0000
+}
+```
+
+### Monedas Adicionales
+```json
+{
+  "code": "USD",
+  "name": "Dólar Americano",
+  "symbol": "US$",
+  "is_default": false,
+  "rate": 42.50
+}
+```
+
+### Actualización Automática
+
+Para habilitar la actualización automática de cotizaciones:
+
+```bash
+# Agregar al crontab
+0 9 * * * cd /var/www/gw && php artisan gw:currency.sync
+```
+
+## 6. Configuración de Usuarios y Permisos
+
+### Crear Roles Básicos
+
+1. **Administrador**: Acceso completo al sistema
+2. **Facturador**: Crear y modificar facturas
+3. **Contador**: Acceso a reportes contables
+4. **Vendedor**: Crear presupuestos y facturas de venta
+
+### Asignación de Permisos
+
+<Tabs>
+  <Tab title="Administrador">
+    - ✅ Todos los permisos GW
+    - ✅ Configuración del sistema
+    - ✅ Gestión de usuarios
+    - ✅ Firma electrónica
+  </Tab>
+
+  <Tab title="Facturador">
+    - ✅ Ver/Crear/Editar facturas
+    - ✅ Gestionar clientes
+    - ✅ Consultar reportes básicos
+    - ❌ Configuración avanzada
+  </Tab>
+
+  <Tab title="Contador">
+    - ✅ Ver todas las facturas
+    - ✅ Reportes contables
+    - ✅ Asientos contables
+    - ❌ Crear/Editar facturas
+  </Tab>
+
+  <Tab title="Vendedor">
+    - ✅ Crear presupuestos
+    - ✅ Facturas de venta únicamente
+    - ✅ Gestionar clientes propios
+    - ❌ Facturas de compra
+  </Tab>
+</Tabs>
+
+## 7. Configuración de Facturación Electrónica
+
+### Certificados Digitales (Uruguay)
+
+1. Obtener certificado de AGESIC
+2. Convertir a formato .p12
+3. Subir en **Empresa > Configuración > Certificados**
+
+```bash
+# Convertir certificado .crt y .key a .p12
+openssl pkcs12 -export -out certificate.p12 \
+  -inkey private.key -in certificate.crt \
+  -certfile ca-chain.crt
+```
+
+### Configuración DGI
+
+```php
+// En configuración de empresa
+'dgi_settings' => [
+    'environment' => 'production', // o 'testing'
+    'webservice_url' => 'https://efactura.dgi.gub.uy/',
+    'certificate_path' => storage_path('certificates/company.p12'),
+    'certificate_password' => 'password_del_certificado',
+    'timeout' => 30
+]
+```
+
+### Prueba de Conectividad
+
+```bash
+# Verificar conectividad con DGI
+php artisan gw:dgi.test-connection --company=1
+
+# Firmar factura de prueba
+php artisan gw:invoice.sign 1 --test
+```
+
+## 8. Configuración de Productos Básicos
+
+### Crear Categorías
+
+Ve a **Catálogo > Categorías** (Shopaholic):
+
+```json
+{
+  "name": "Productos",
+  "code": "productos",
+  "description": "Productos para la venta"
+}
+```
+
+### Crear Productos de Ejemplo
+
+```json
+{
+  "name": "Producto de Ejemplo",
+  "code": "PROD001",
+  "price": 100.00,
+  "tax_type_id": 1,
+  "category_id": 1,
+  "active": true
+}
+```
+
+## 9. Configuración de Clientes
+
+### Cliente por Defecto
+
+Crear un cliente genérico para ventas ocasionales:
+
+```json
+{
+  "name": "Cliente Contado",
+  "document_type": "other",
+  "document_number": "00000000",
+  "email": "contado@empresa.com",
+  "is_default": true
+}
+```
+
+### Configurar Grupos de Clientes
+
+- **Mayoristas**: Descuentos especiales
+- **Minoristas**: Precios de lista
+- **Exportación**: Sin impuestos locales
+
+## 10. Tests de Configuración
+
+### Verificar Configuración Básica
+
+```bash
+# Test completo de configuración
+php artisan gw:config.test
+
+# Verificar empresa
+php artisan tinker
+>>> Company::first()->name
+>>> Company::first()->rut
+```
+
+### Crear Factura de Prueba
+
+```bash
+php artisan tinker
+
+# Crear factura básica
+>>> $invoice = new PlanetaDelEste\GW\Models\Invoice();
+>>> $invoice->company_id = 1;
+>>> $invoice->customer_id = 1;
+>>> $invoice->invoice_type_id = 1;
+>>> $invoice->currency_id = 1;
+>>> $invoice->order_serial = 'A';
+>>> $invoice->description = 'Factura de prueba';
+>>> $invoice->save();
+>>> $invoice->id
+```
+
+### Verificar Numeración
+
+```bash
+# Verificar que se genera numeración automática
+>>> $invoice->order_number
+>>> $invoice->full_number  // A 00000001
+```
+
+## Configuración Avanzada
+
+### Performance y Cache
+
+```bash
+# Configurar cache para consultas frecuentes
+php artisan config:publish October.Drivers.Cache
+
+# Configurar Redis para cache
+CACHE_DRIVER=redis
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+```
+
+### Configurar Colas
+
+```bash
+# Configurar cola para procesamiento asíncrono
+QUEUE_CONNECTION=database
+
+# Crear tabla de trabajos
+php artisan queue:table
+php artisan migrate
+
+# Iniciar worker
+php artisan queue:work
+```
+
+### Monitoreo
+
+```bash
+# Configurar logs específicos
+'channels' => [
+    'gw' => [
+        'driver' => 'daily',
+        'path' => storage_path('logs/gw.log'),
+        'level' => 'info',
+        'days' => 30,
+    ],
+]
+```
+
+## Checklist Final
+
+Antes de comenzar la operación, verificar:
+
+- [ ] Empresa configurada con datos fiscales correctos
+- [ ] Tipos de comprobante configurados
+- [ ] Plan de cuentas básico establecido
+- [ ] Impuestos configurados correctamente
+- [ ] Monedas y cotizaciones actualizadas
+- [ ] Usuarios y permisos asignados
+- [ ] Certificado digital instalado (si aplica)
+- [ ] Factura de prueba creada exitosamente
+- [ ] Conexión con servicios fiscales funcionando
+- [ ] Backup inicial realizado
+
+---
+
+<Tip>
+**Backup**: Realiza un backup completo después de la configuración inicial.
+</Tip>
+
+<Warning>
+**Certificados**: Verifica las fechas de expiración de los certificados digitales.
+</Warning>
+
+<Info>
+**Soporte**: Para configuraciones específicas de tu país, consulta con el equipo de soporte.
+</Info>

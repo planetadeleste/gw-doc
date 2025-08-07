@@ -1,0 +1,468 @@
+---
+title: "Modelo InvoicePosition"
+description: "Modelo para las líneas de detalle de facturas y comprobantes"
+---
+
+# Modelo InvoicePosition
+
+El modelo `InvoicePosition` representa cada línea de detalle de una factura o comprobante. Maneja productos, servicios, descuentos e impuestos aplicados a cada ítem.
+
+## Información General
+
+- **Namespace**: `PlanetaDelEste\GW\Models\InvoicePosition`
+- **Tabla**: `invoice_positions`
+- **Clave Primaria**: `id`
+- **Timestamps**: Sí
+- **Auditable**: No (hereda auditoría de Invoice)
+
+## Propiedades Principales
+
+### Identificación y Referencias
+```php
+public int $id                      // ID único de la línea
+public int $invoice_id              // ID de la factura padre
+public int $ref_id                  // ID de referencia a otra posición
+public int $item_id                 // ID del ítem (producto/servicio)
+public string $item_type            // Tipo de ítem (Offer, Product, etc.)
+```
+
+### Información del Producto/Servicio
+```php
+public string $name                 // Nombre del ítem
+public string $description          // Descripción detallada
+public float $quantity              // Cantidad vendida/comprada
+public float $price                 // Precio unitario
+public int $indicator               // Indicador especial
+```
+
+### Información Fiscal y Monetaria
+```php
+public int $currency_id             // Moneda de la posición
+public float $quote                 // Cotización aplicada
+public int $tax_type_id             // Tipo de impuesto aplicado
+public float $tax_percent           // Porcentaje de impuesto
+```
+
+### Campos Calculados (Accessors)
+```php
+public float $price_value           // Precio base calculado
+public float $price_without_tax     // Precio sin impuestos
+public float $total_tax             // Total de impuestos
+public float $total_with_tax        // Total con impuestos
+public float $total_without_tax     // Total sin impuestos
+public float $unit_price            // Precio unitario final
+```
+
+## Relaciones
+
+### Belongs To (Pertenece a)
+
+```php
+// Factura padre
+public function invoice(): BelongsTo
+{
+    return $this->belongsTo(Invoice::class);
+}
+
+// Moneda de la posición
+public function currency(): BelongsTo
+{
+    return $this->belongsTo(Currency::class);
+}
+
+// Tipo de impuesto
+public function tax_type(): BelongsTo
+{
+    return $this->belongsTo(TaxType::class);
+}
+
+// Posición de referencia
+public function reference(): BelongsTo
+{
+    return $this->belongsTo(InvoicePosition::class, 'ref_id');
+}
+```
+
+### Has Many (Tiene muchos)
+
+```php
+// Posiciones que referencian a esta
+public function references(): HasMany
+{
+    return $this->hasMany(InvoicePosition::class, 'ref_id');
+}
+```
+
+### Morph To (Polimórfica - Pertenece a)
+
+```php
+// Ítem asociado (Producto, Oferta, etc.)
+public function item(): MorphTo
+{
+    return $this->morphTo('item', 'item_type', 'item_id');
+}
+```
+
+### Morph Many (Polimórficas - Tiene muchos)
+
+```php
+// Descuentos aplicados a la posición
+public function discounts(): MorphMany
+{
+    return $this->morphMany(Discount::class, 'discountable');
+}
+```
+
+### Belongs To Many (Muchos a muchos)
+
+```php
+// Etiquetas aplicadas
+public function labels(): BelongsToMany
+{
+    return $this->belongsToMany(Label::class);
+}
+```
+
+## Validaciones
+
+```php
+public $rules = [
+    'invoice_id' => 'required|integer|exists:invoices,id',
+    'item_id' => 'required|integer',
+    'item_type' => 'required|string|max:255',
+    'name' => 'required|string|max:255',
+    'quantity' => 'required|numeric|min:0.01',
+    'price' => 'required|numeric|min:0',
+    'tax_percent' => 'nullable|numeric|min:0|max:100',
+    'currency_id' => 'required|integer|exists:currencies,id'
+];
+
+public $customMessages = [
+    'quantity.min' => 'La cantidad debe ser mayor a cero',
+    'price.min' => 'El precio no puede ser negativo',
+    'tax_percent.max' => 'El porcentaje de impuesto no puede superar el 100%'
+];
+```
+
+## Scopes Disponibles
+
+### Por Factura
+```php
+// Posiciones de una factura específica
+$positions = InvoicePosition::getByInvoice($invoiceId)->get();
+
+// Posiciones de múltiples facturas
+$positions = InvoicePosition::getByInvoice([1, 2, 3])->get();
+```
+
+### Por Tipo de Ítem
+```php
+// Solo productos
+$positions = InvoicePosition::where('item_type', 'Lovata\Shopaholic\Models\Product')->get();
+
+// Solo ofertas
+$positions = InvoicePosition::where('item_type', 'Lovata\Shopaholic\Models\Offer')->get();
+```
+
+## Accessors y Mutators
+
+### Accessors (Getters)
+
+```php
+// Precio unitario final
+public function getUnitPriceAttribute(): float
+{
+    return MoneyHelper::round($this->price * $this->quote);
+}
+
+// Precio unitario sin impuestos
+public function getUnitPriceWithoutTaxAttribute(): float
+{
+    $price = $this->unit_price;
+    if ($this->tax_percent > 0) {
+        $price = $price / (1 + ($this->tax_percent / 100));
+    }
+    return MoneyHelper::round($price);
+}
+
+// Total sin impuestos
+public function getTotalWithoutTaxAttribute(): float
+{
+    return MoneyHelper::round($this->unit_price_without_tax * $this->quantity);
+}
+
+// Total de impuestos
+public function getTotalTaxAttribute(): float
+{
+    return MoneyHelper::round($this->total_with_tax - $this->total_without_tax);
+}
+
+// Total con impuestos
+public function getTotalWithTaxAttribute(): float
+{
+    return MoneyHelper::round($this->unit_price * $this->quantity);
+}
+
+// Precio con descuentos aplicados
+public function getPriceWithDiscountsAttribute(): float
+{
+    $price = $this->unit_price;
+    $discounts = $this->discounts->sum('amount');
+    return MoneyHelper::round($price - $discounts);
+}
+```
+
+### Mutators (Setters)
+
+```php
+// Normalizar nombre
+public function setNameAttribute($value): void
+{
+    $this->attributes['name'] = trim($value);
+}
+
+// Redondear precio
+public function setPriceAttribute($value): void
+{
+    $this->attributes['price'] = MoneyHelper::round($value);
+}
+
+// Redondear cantidad
+public function setQuantityAttribute($value): void
+{
+    $this->attributes['quantity'] = round($value, 4);
+}
+```
+
+## Eventos del Modelo
+
+```php
+public function beforeSave()
+{
+    // Establecer cotización si no está definida
+    if (!$this->quote && $this->currency_id) {
+        $this->setCurrentQuote();
+    }
+
+    // Copiar información del ítem si está disponible
+    if ($this->item && !$this->name) {
+        $this->copyItemData();
+    }
+}
+
+public function afterSave()
+{
+    // Actualizar totales de la factura padre
+    if ($this->invoice) {
+        $this->invoice->recalculateTotals();
+    }
+}
+
+public function beforeDelete()
+{
+    // Eliminar descuentos asociados
+    $this->discounts()->delete();
+}
+```
+
+## Métodos Principales
+
+### Cálculos de Precios
+
+```php
+// Calcular precio base
+public function calculateBasePrice(): float
+{
+    return $this->price * $this->quote;
+}
+
+// Aplicar descuentos
+public function applyDiscounts(): float
+{
+    $price = $this->unit_price;
+    $totalDiscounts = $this->discounts->sum('amount');
+    return max(0, $price - $totalDiscounts);
+}
+
+// Calcular impuestos
+public function calculateTax(): float
+{
+    $basePrice = $this->price_with_discounts;
+    if ($this->tax_percent > 0) {
+        return $basePrice * ($this->tax_percent / 100);
+    }
+    return 0;
+}
+```
+
+### Gestión de Descuentos
+
+```php
+// Agregar descuento
+public function addDiscount(float $amount, string $type = 'amount'): Discount
+{
+    return $this->discounts()->create([
+        'amount' => $amount,
+        'type' => $type,
+        'description' => 'Descuento aplicado'
+    ]);
+}
+
+// Eliminar descuentos
+public function clearDiscounts(): int
+{
+    return $this->discounts()->delete();
+}
+```
+
+### Utilidades
+
+```php
+// Copiar datos del ítem asociado
+public function copyItemData(): void
+{
+    if (!$this->item) return;
+
+    $this->name = $this->item->name;
+    $this->description = $this->item->description ?? '';
+
+    if (method_exists($this->item, 'getPrice')) {
+        $this->price = $this->item->getPrice();
+    }
+}
+
+// Validar cantidad disponible
+public function validateStock(): bool
+{
+    if (!$this->item || !method_exists($this->item, 'getStock')) {
+        return true; // No hay control de stock
+    }
+
+    return $this->item->getStock() >= $this->quantity;
+}
+```
+
+## Tipos de Ítems Soportados
+
+### Productos (Lovata\Shopaholic\Models\Product)
+```php
+$position = new InvoicePosition([
+    'item_id' => $product->id,
+    'item_type' => 'Lovata\Shopaholic\Models\Product',
+    'name' => $product->name,
+    'quantity' => 1,
+    'price' => $product->price
+]);
+```
+
+### Ofertas (Lovata\Shopaholic\Models\Offer)
+```php
+$position = new InvoicePosition([
+    'item_id' => $offer->id,
+    'item_type' => 'Lovata\Shopaholic\Models\Offer',
+    'name' => $offer->name,
+    'quantity' => 2,
+    'price' => $offer->price
+]);
+```
+
+### Servicios Personalizados
+```php
+$position = new InvoicePosition([
+    'item_id' => 0,
+    'item_type' => 'service',
+    'name' => 'Servicio de consultoría',
+    'description' => 'Asesoría técnica especializada',
+    'quantity' => 8, // horas
+    'price' => 50.00
+]);
+```
+
+## Ejemplos de Uso
+
+### Crear Posición Básica
+```php
+$invoice = Invoice::find(1);
+
+$position = $invoice->positions()->create([
+    'item_id' => 100,
+    'item_type' => 'Lovata\Shopaholic\Models\Product',
+    'name' => 'Producto XYZ',
+    'quantity' => 2,
+    'price' => 150.00,
+    'tax_type_id' => 1,
+    'currency_id' => 1
+]);
+```
+
+### Aplicar Descuentos
+```php
+$position = InvoicePosition::find(1);
+
+// Descuento por monto fijo
+$position->addDiscount(10.00, 'amount');
+
+// Descuento porcentual
+$position->addDiscount(15.00, 'percent');
+```
+
+### Consultar con Cálculos
+```php
+$positions = InvoicePosition::where('invoice_id', 1)
+    ->with(['item', 'discounts', 'tax_type'])
+    ->get();
+
+foreach ($positions as $position) {
+    echo "Producto: {$position->name}\n";
+    echo "Cantidad: {$position->quantity}\n";
+    echo "Precio unitario: {$position->unit_price}\n";
+    echo "Total con impuestos: {$position->total_with_tax}\n";
+    echo "Descuentos aplicados: {$position->discounts->count()}\n";
+}
+```
+
+### Validar Stock
+```php
+$position = new InvoicePosition([...]);
+
+if (!$position->validateStock()) {
+    throw new ValidationException([
+        'quantity' => 'Stock insuficiente para el producto'
+    ]);
+}
+```
+
+## Consideraciones Especiales
+
+<Warning>
+**Cálculos de Precios**: Los cálculos se realizan considerando la cotización de la moneda al momento de la creación.
+</Warning>
+
+<Info>
+**Descuentos**: Los descuentos se pueden aplicar tanto a nivel de posición como globalmente en la factura.
+</Info>
+
+<Tip>
+**Performance**: Para consultas masivas, usa eager loading con las relaciones necesarias.
+</Tip>
+
+## Fórmulas de Cálculo
+
+### Precio Final
+```
+precio_final = (precio_base * cotización) - descuentos
+```
+
+### Impuestos
+```
+impuesto = precio_con_descuentos * (porcentaje_impuesto / 100)
+```
+
+### Total por Línea
+```
+total = (precio_final + impuesto) * cantidad
+```
+
+---
+
+El modelo InvoicePosition es crucial para el cálculo preciso de totales y la aplicación correcta de impuestos y descuentos en el sistema de facturación.

@@ -1,0 +1,504 @@
+---
+title: "Instalación"
+description: "Guía completa de instalación del plugin PlanetaDelEste.GW"
+---
+
+# Instalación
+
+Esta guía te ayudará a instalar y configurar el plugin PlanetaDelEste.GW en tu proyecto OctoberCMS.
+
+## Requisitos del Sistema
+
+### Software Requerido
+
+<CardGroup cols={2}>
+  <Card title="OctoberCMS" icon="snowflake">
+    Versión 3.0 o superior
+  </Card>
+  <Card title="PHP" icon="code">
+    Versión 8.1 o superior
+  </Card>
+  <Card title="Base de Datos" icon="database">
+    MySQL 5.7+ o PostgreSQL 12+
+  </Card>
+  <Card title="Servidor Web" icon="server">
+    Apache 2.4+ o Nginx 1.18+
+  </Card>
+</CardGroup>
+
+### Extensiones PHP Requeridas
+
+```bash
+# Extensiones obligatorias
+php8.1-curl
+php8.1-gd
+php8.1-json
+php8.1-mbstring
+php8.1-mysql    # o php8.1-pgsql para PostgreSQL
+php8.1-openssl
+php8.1-pdo
+php8.1-tokenizer
+php8.1-xml
+php8.1-zip
+
+# Extensiones recomendadas
+php8.1-redis
+php8.1-imagick
+php8.1-opcache
+```
+
+### Recursos del Sistema
+
+| Recurso | Mínimo | Recomendado | Producción |
+|---------|--------|-------------|-----------|
+| **RAM** | 512MB | 2GB | 4GB+ |
+| **CPU** | 1 Core | 2 Cores | 4+ Cores |
+| **Disco** | 2GB | 10GB | 50GB+ |
+| **PHP Memory** | 256M | 512M | 1G+ |
+
+## Métodos de Instalación
+
+### 1. A través del Marketplace de October
+
+```bash
+# Buscar el plugin en el marketplace
+php artisan plugin:install PlanetaDelEste.GW
+
+# O especificar versión
+php artisan plugin:install PlanetaDelEste.GW --version=1.0.0
+```
+
+### 2. Descarga Manual
+
+```bash
+# Crear directorio del plugin
+mkdir -p plugins/planetadeleste/gw
+
+# Descargar y extraer el plugin
+cd plugins/planetadeleste/gw
+wget https://github.com/planetadeleste/oc-gw-plugin/archive/main.zip
+unzip main.zip --strip-components=1
+
+# Instalar dependencias
+composer install --no-dev
+```
+
+### 3. Clonado desde Git
+
+```bash
+# Clonar repositorio
+git clone https://github.com/planetadeleste/oc-gw-plugin.git plugins/planetadeleste/gw
+
+# Cambiar al directorio del plugin
+cd plugins/planetadeleste/gw
+
+# Instalar dependencias
+composer install
+```
+
+### 4. A través de Composer
+
+```bash
+# Agregar al composer.json del proyecto
+composer require planetadeleste/oc-gw-plugin
+
+# Actualizar dependencias
+composer update
+```
+
+## Configuración de Base de Datos
+
+### MySQL
+
+```sql
+-- Crear base de datos
+CREATE DATABASE gw_app CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Crear usuario
+CREATE USER 'gw_user'@'localhost' IDENTIFIED BY 'secure_password';
+GRANT ALL PRIVILEGES ON gw_app.* TO 'gw_user'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+### PostgreSQL
+
+```sql
+-- Crear base de datos
+CREATE DATABASE gw_app WITH ENCODING 'UTF8';
+
+-- Crear usuario
+CREATE USER gw_user WITH PASSWORD 'secure_password';
+GRANT ALL PRIVILEGES ON DATABASE gw_app TO gw_user;
+```
+
+### Configuración en .env
+
+```bash
+# Base de datos principal
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=gw_app
+DB_USERNAME=gw_user
+DB_PASSWORD=secure_password
+
+# Configuración de timezone
+APP_TIMEZONE=America/Montevideo
+
+# Configuración de idioma
+APP_LOCALE=es
+APP_FALLBACK_LOCALE=en
+```
+
+## Ejecución de Migraciones
+
+### Instalación Inicial
+
+```bash
+# Ejecutar migraciones del core de October
+php artisan october:migrate
+
+# Instalar el plugin y sus migraciones
+php artisan plugin:refresh PlanetaDelEste.GW
+```
+
+### Verificar Instalación
+
+```bash
+# Verificar que el plugin esté instalado
+php artisan plugin:list
+
+# Verificar migraciones
+php artisan migrate:status
+```
+
+## Configuración Inicial
+
+### 1. Configurar Permisos
+
+```bash
+# Establecer permisos correctos (Linux/Unix)
+sudo chown -R www-data:www-data /var/www/october
+sudo chmod -R 755 /var/www/october
+sudo chmod -R 775 storage/
+sudo chmod -R 775 plugins/
+sudo chmod -R 775 themes/
+
+# Para desarrollo con usuario específico
+sudo chown -R $USER:www-data /var/www/october
+sudo chmod -R 775 storage/
+```
+
+### 2. Configurar Cache
+
+```bash
+# Generar caches de configuración
+php artisan config:cache
+php artisan route:cache
+
+# Para desarrollo (deshabilitar caches)
+php artisan config:clear
+php artisan route:clear
+php artisan cache:clear
+```
+
+### 3. Configurar Queue Worker
+
+```bash
+# Configurar supervisor (Linux)
+sudo nano /etc/supervisor/conf.d/october-worker.conf
+
+# Contenido del archivo:
+[program:october-worker]
+process_name=%(program_name)s_%(process_num)02d
+command=php /var/www/october/artisan queue:work --sleep=3 --tries=3
+autostart=true
+autorestart=true
+user=www-data
+numprocs=4
+redirect_stderr=true
+stdout_logfile=/var/www/october/storage/logs/worker.log
+```
+
+## Configuración del Servidor Web
+
+### Apache
+
+```apache
+<VirtualHost *:80>
+    ServerName gw.tu-dominio.com
+    DocumentRoot /var/www/october
+
+    <Directory "/var/www/october">
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    # Configuraciones de seguridad
+    <Files ~ "^\.">
+        Require all denied
+    </Files>
+
+    # Optimizaciones
+    <IfModule mod_deflate.c>
+        AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/x-javascript
+    </IfModule>
+</VirtualHost>
+```
+
+### Nginx
+
+```nginx
+server {
+    listen 80;
+    server_name gw.tu-dominio.com;
+    root /var/www/october;
+    index index.php;
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-XSS-Protection "1; mode=block";
+    add_header X-Content-Type-Options "nosniff";
+
+    # Main location
+    location / {
+        try_files $uri $uri/ @october;
+    }
+
+    location @october {
+        rewrite ^/(.*)$ /index.php?/$1 last;
+    }
+
+    # PHP-FPM
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php8.1-fpm.sock;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+
+        # Aumentar timeouts para comandos largos
+        fastcgi_read_timeout 300s;
+    }
+
+    # Static files
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Security
+    location ~ /\. {
+        deny all;
+    }
+}
+```
+
+## Instalación en Desarrollo
+
+### Usando Docker
+
+```yaml
+# docker-compose.yml
+version: '3.8'
+
+services:
+  web:
+    image: php:8.1-apache
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html
+    environment:
+      - DB_HOST=mysql
+      - DB_DATABASE=gw_app
+      - DB_USERNAME=gw_user
+      - DB_PASSWORD=password
+
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_DATABASE=gw_app
+      - MYSQL_USER=gw_user
+      - MYSQL_PASSWORD=password
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  mysql_data:
+```
+
+### Usando Laradock
+
+```bash
+# Clonar Laradock
+git clone https://github.com/Laradock/laradock.git
+cd laradock
+
+# Copiar configuración
+cp .env.example .env
+
+# Editar configuración
+nano .env
+# APP_CODE_PATH_HOST=../october
+# DATA_PATH_HOST=~/.laradock/data
+# PHP_VERSION=8.1
+
+# Iniciar contenedores
+docker-compose up -d nginx mysql redis workspace
+```
+
+## Post-Instalación
+
+### 1. Configurar Empresa Principal
+
+```bash
+# Acceder al backend de October
+# URL: http://tu-dominio.com/backend
+# Crear usuario administrador si no existe
+php artisan october:install
+```
+
+### 2. Configurar Plugin
+
+1. Ir a **Configuración > Plugin GW > Empresas**
+2. Crear la empresa principal
+3. Configurar datos fiscales (RUT, razón social, etc.)
+4. Subir certificado digital (si aplica)
+
+### 3. Configurar Tipos Básicos
+
+```bash
+# Ejecutar seeders básicos
+php artisan db:seed --class=PlanetaDelEste\\GW\\Database\\Seeds\\BasicDataSeeder
+```
+
+### 4. Configurar Cron Jobs
+
+```bash
+# Editar crontab
+crontab -e
+
+# Agregar línea para scheduled tasks
+* * * * * cd /var/www/october && php artisan schedule:run >> /dev/null 2>&1
+
+# O específicamente para GW
+0 2 * * * cd /var/www/october && php artisan gw:update.balance >> /var/log/gw-balance.log 2>&1
+```
+
+## Verificación de la Instalación
+
+### Tests de Conectividad
+
+```bash
+# Verificar conexión a base de datos
+php artisan tinker
+>>> DB::connection()->getPdo();
+
+# Verificar cache
+php artisan cache:store redis ping
+
+# Verificar queue
+php artisan queue:work --once
+```
+
+### Tests Funcionales
+
+```bash
+# Ejecutar tests del plugin
+php artisan test plugins/planetadeleste/gw/tests
+
+# Test de creación de factura
+php artisan tinker
+>>> $invoice = new PlanetaDelEste\GW\Models\Invoice();
+>>> $invoice->company_id = 1;
+>>> $invoice->customer_id = 1;
+>>> $invoice->save();
+```
+
+## Troubleshooting Común
+
+### Error de Permisos
+
+```bash
+# Problema: Permission denied en storage
+sudo chmod -R 775 storage/
+sudo chown -R www-data:www-data storage/
+```
+
+### Error de Memoria
+
+```bash
+# Problema: Memory limit exhausted
+# Aumentar en php.ini
+memory_limit = 512M
+
+# O temporalmente
+php -d memory_limit=1G artisan gw:update.balance
+```
+
+### Error de Base de Datos
+
+```bash
+# Problema: Connection refused
+# Verificar configuración .env
+DB_HOST=127.0.0.1  # No usar localhost si hay problemas
+DB_PORT=3306       # Verificar puerto correcto
+```
+
+### Error de Certificados SSL
+
+```bash
+# Problema con curl/SSL en desarrollo
+# Deshabilitar verificación SSL en .env
+GW_SSL_VERIFY=false
+
+# O configurar certificados CA
+curl_setopt($ch, CURLOPT_CAINFO, '/path/to/cacert.pem');
+```
+
+## Actualizaciones
+
+### Actualizar Plugin
+
+```bash
+# A través de October
+php artisan plugin:refresh PlanetaDelEste.GW --force
+
+# Manual desde Git
+cd plugins/planetadeleste/gw
+git pull origin main
+composer update
+php artisan plugin:refresh PlanetaDelEste.GW
+```
+
+### Backup Antes de Actualizar
+
+```bash
+# Backup de base de datos
+mysqldump -u root -p gw_app > backup_$(date +%Y%m%d).sql
+
+# Backup de archivos
+tar -czf backup_files_$(date +%Y%m%d).tar.gz plugins/planetadeleste/gw/
+```
+
+---
+
+<Tip>
+**Desarrollo**: Para desarrollo, usa `APP_DEBUG=true` y desactiva los caches.
+</Tip>
+
+<Warning>
+**Producción**: Asegúrate de configurar `APP_DEBUG=false` y activar todos los caches en producción.
+</Warning>
+
+<Info>
+**Soporte**: Si encuentras problemas, consulta los logs en `storage/logs/` o contacta al soporte técnico.
+</Info>

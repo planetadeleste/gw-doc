@@ -1,0 +1,365 @@
+---
+title: "Comandos de Consola"
+description: "Documentación de los comandos Artisan del plugin PlanetaDelEste.GW"
+---
+
+# Comandos de Consola
+
+El plugin PlanetaDelEste.GW incluye una serie de comandos Artisan para automatizar tareas administrativas, mantenimiento y migración de datos. Estos comandos están diseñados para ejecutarse desde la línea de comandos o programarse como tareas.
+
+## Estructura General
+
+Todos los comandos extienden `Illuminate\Console\Command` e implementan el trait `CommandTrait` para funcionalidades comunes:
+
+```php
+use Illuminate\Console\Command;
+use PlanetaDelEste\GW\Traits\Console\CommandTrait;
+
+class ExampleCommand extends Command
+{
+    use CommandTrait;
+
+    protected $signature = 'gw:example {argument} {--option=default}';
+    protected $description = 'Descripción del comando';
+
+    public function handle(): void
+    {
+        // Lógica del comando
+    }
+}
+```
+
+## Comandos Principales
+
+### Gestión de Saldos
+
+<CardGroup cols={2}>
+  <Card title="gw:update.balance" href="/comandos/saldos/update-balance">
+    Actualización masiva de saldos de clientes
+  </Card>
+  <Card title="gw:balance.recalculate" href="/comandos/saldos/recalculate-balance">
+    Recálculo completo de saldos contables
+  </Card>
+</CardGroup>
+
+### Migración de Datos
+
+<CardGroup cols={2}>
+  <Card title="gw:migrate.from-pgsql" href="/comandos/migracion/migrate-from-pgsql">
+    Migración desde PostgreSQL
+  </Card>
+  <Card title="gw:migration.start" href="/comandos/migracion/migration-start">
+    Inicio de proceso de migración
+  </Card>
+  <Card title="gw:migration.task" href="/comandos/migracion/migration-task">
+    Ejecución de tareas de migración
+  </Card>
+  <Card title="gw:migration.validate" href="/comandos/migracion/migration-validate">
+    Validación de datos migrados
+  </Card>
+</CardGroup>
+
+### Gestión de Facturas
+
+<CardGroup cols={2}>
+  <Card title="gw:invoices.create-flat" href="/comandos/facturas/create-flat-invoices">
+    Creación de tablas planas de facturas
+  </Card>
+  <Card title="gw:invoices.remove" href="/comandos/facturas/invoices-remove">
+    Eliminación masiva de facturas
+  </Card>
+  <Card title="gw:invoices.update-status" href="/comandos/facturas/update-invoice-status">
+    Actualización de estados de facturas
+  </Card>
+  <Card title="gw:xml-to-invoice" href="/comandos/facturas/xml-to-invoice">
+    Conversión de XML a facturas
+  </Card>
+</CardGroup>
+
+### Mantenimiento y Utilidades
+
+<CardGroup cols={2}>
+  <Card title="gw:clear" href="/comandos/mantenimiento/clear">
+    Limpieza de cachés y datos temporales
+  </Card>
+  <Card title="gw:clean-company" href="/comandos/mantenimiento/clean-company">
+    Limpieza de datos de empresa
+  </Card>
+  <Card title="gw:copy-company" href="/comandos/mantenimiento/copy-company">
+    Copia de configuración entre empresas
+  </Card>
+  <Card title="gw:update-indexes" href="/comandos/mantenimiento/update-indexes">
+    Actualización de índices de base de datos
+  </Card>
+</CardGroup>
+
+### Sincronización y Exportación
+
+<CardGroup cols={2}>
+  <Card title="gw:currency.sync" href="/comandos/sincronizacion/currency-sync">
+    Sincronización de cotizaciones
+  </Card>
+  <Card title="gw:csv-to-db" href="/comandos/sincronizacion/csv-to-db">
+    Importación de datos desde CSV
+  </Card>
+  <Card title="gw:sync-productlist-offers" href="/comandos/sincronizacion/sync-productlist-offers">
+    Sincronización de ofertas de productos
+  </Card>
+</CardGroup>
+
+## Parámetros Comunes
+
+### Argumentos Estándar
+```bash
+# ID de empresa (opcional en la mayoría de comandos)
+php artisan gw:comando {company_id}
+
+# Procesar empresa específica
+php artisan gw:update.balance 1
+```
+
+### Opciones Globales
+```bash
+# Tamaño de lote para procesamiento
+--chunk-size=500
+
+# Límite de memoria
+--memory-limit=512M
+
+# Modo silencioso (sin salida)
+--quiet
+
+# Modo verboso
+-v, -vv, -vvv
+
+# Forzar ejecución sin confirmación
+--force
+
+# Modo de prueba (dry-run)
+--dry-run
+```
+
+## Configuración de Memoria y Performance
+
+### Optimización de Memoria
+```bash
+# Para comandos que procesan grandes volúmenes
+php artisan gw:update.balance --chunk-size=100 --memory-limit=256M
+
+# Para servidores con recursos limitados
+php artisan gw:migrate.from-pgsql --chunk-size=50 --memory-limit=128M
+```
+
+### Procesamiento por Lotes
+```php
+// Configuración típica en comandos
+protected $chunkSize = 500;
+protected $memoryLimit = '512M';
+
+public function handle(): void
+{
+    if ($this->option('memory-limit')) {
+        ini_set('memory_limit', $this->option('memory-limit'));
+    }
+
+    set_time_limit(0); // Sin límite de tiempo
+
+    Model::chunk($this->option('chunk-size', $this->chunkSize), function ($records) {
+        $this->processRecords($records);
+    });
+}
+```
+
+## Logging y Monitoreo
+
+### Registro de Actividad
+```php
+public function handle(): void
+{
+    $this->info('Iniciando comando...');
+
+    try {
+        $this->processData();
+        $this->info('Comando ejecutado exitosamente');
+    } catch (Exception $e) {
+        $this->error('Error: ' . $e->getMessage());
+        Log::error('Error en comando', ['exception' => $e]);
+        return 1;
+    }
+
+    return 0;
+}
+```
+
+### Barras de Progreso
+```php
+$records = Model::all();
+$progressBar = $this->output->createProgressBar($records->count());
+$progressBar->start();
+
+foreach ($records as $record) {
+    $this->processRecord($record);
+    $progressBar->advance();
+}
+
+$progressBar->finish();
+$this->newLine();
+```
+
+## Ejecución Programada
+
+### Configuración en Kernel
+```php
+// app/Console/Kernel.php
+protected function schedule(Schedule $schedule)
+{
+    // Actualizar saldos diariamente
+    $schedule->command('gw:update.balance')
+        ->daily()
+        ->withoutOverlapping()
+        ->appendOutputTo(storage_path('logs/balance-update.log'));
+
+    // Sincronizar cotizaciones cada hora
+    $schedule->command('gw:currency.sync')
+        ->hourly()
+        ->runInBackground();
+
+    // Limpieza semanal
+    $schedule->command('gw:clear')
+        ->weekly()
+        ->sundays()
+        ->at('02:00');
+}
+```
+
+### Ejecución Manual
+```bash
+# Ejecutar comando específico
+php artisan gw:update.balance
+
+# Con parámetros
+php artisan gw:update.balance 1 --chunk-size=100
+
+# En segundo plano (Linux/Unix)
+nohup php artisan gw:migrate.from-pgsql > /dev/null 2>&1 &
+
+# Con timeout (Linux/Unix)
+timeout 3600 php artisan gw:update.balance
+```
+
+## Monitoreo y Troubleshooting
+
+### Verificación de Estado
+```bash
+# Ver comandos disponibles
+php artisan list gw:
+
+# Ayuda de comando específico
+php artisan help gw:update.balance
+
+# Verificar configuración
+php artisan config:show database
+
+# Estado de la cola
+php artisan queue:work --once
+```
+
+### Logs y Debugging
+```php
+// En comandos
+$this->info("Procesando {$count} registros...");
+$this->warn("Advertencia: datos incompletos");
+$this->error("Error crítico detectado");
+
+// Log personalizado
+Log::channel('gw-commands')->info('Comando iniciado', [
+    'command' => $this->name,
+    'arguments' => $this->arguments(),
+    'options' => $this->options()
+]);
+```
+
+## Trait CommandTrait
+
+### Funcionalidades Incluidas
+```php
+trait CommandTrait
+{
+    // Configuración de memoria
+    protected function setMemoryLimit(string $limit): void
+    {
+        ini_set('memory_limit', $limit);
+        $this->info("Límite de memoria establecido: {$limit}");
+    }
+
+    // Información del sistema
+    protected function showSystemInfo(): void
+    {
+        $this->info("Memoria actual: " . memory_get_usage(true));
+        $this->info("Memoria pico: " . memory_get_peak_usage(true));
+    }
+
+    // Validación de empresa
+    protected function validateCompany(int $companyId): Company
+    {
+        $company = Company::find($companyId);
+        if (!$company) {
+            throw new InvalidArgumentException("Empresa no encontrada: {$companyId}");
+        }
+        return $company;
+    }
+}
+```
+
+## Ejemplos de Uso
+
+### Comando Básico
+```bash
+# Actualizar saldos de todas las empresas
+php artisan gw:update.balance
+
+# Actualizar saldos de empresa específica
+php artisan gw:update.balance 1
+
+# Con configuración específica
+php artisan gw:update.balance --chunk-size=200 --memory-limit=1G
+```
+
+### Comando con Filtros
+```bash
+# Actualizar cliente específico
+php artisan gw:update.balance --customer=100
+
+# Actualizar factura específica
+php artisan gw:update.balance --id=500
+```
+
+### Migración Completa
+```bash
+# Migrar desde PostgreSQL
+php artisan gw:migrate.from-pgsql --chunk-size=100
+
+# Validar migración
+php artisan gw:migration.validate
+
+# Limpiar datos temporales
+php artisan gw:clear --force
+```
+
+## Mejores Prácticas
+
+<Tip>
+**Memoria**: Usa chunk processing para manejar grandes volúmenes de datos.
+</Tip>
+
+<Warning>
+**Tiempo**: Configura sin límite de tiempo para comandos largos.
+</Warning>
+
+<Info>
+**Logging**: Registra actividad importante para auditoría.
+</Info>
+
+---
+
+Los comandos de consola son esenciales para el mantenimiento y administración del sistema, especialmente en entornos de producción.

@@ -1,0 +1,523 @@
+---
+title: "Configuración"
+description: "Configuración y personalización del plugin PlanetaDelEste.GW"
+---
+
+# Configuración
+
+El plugin PlanetaDelEste.GW ofrece múltiples opciones de configuración para adaptarse a diferentes necesidades empresariales y regionales. La configuración se maneja a través de archivos, base de datos y la interfaz de administración.
+
+## Estructura de Configuración
+
+### Archivos de Configuración
+- **config/config.php**: Configuraciones base del plugin
+- **lang/**: Archivos de traducción e idiomas
+- **plugin.yaml**: Configuración del plugin para OctoberCMS
+
+### Configuraciones en Base de Datos
+- **Settings**: Configuraciones globales del sistema
+- **CompanySettings**: Configuraciones específicas por empresa
+- **Modules**: Habilitación/deshabilitación de módulos
+
+## Configuraciones Fiscales
+
+### Cláusulas de Venta (ClauVenta)
+
+Las cláusulas de venta según normativas internacionales:
+
+```php
+'sell_clause' => [
+    'EXW',  // Ex Works
+    'FAS',  // Free Alongside Ship
+    'FOB',  // Free On Board
+    'FCA',  // Free Carrier
+    'CFR',  // Cost and Freight
+    'CIF',  // Cost Insurance and Freight
+    'CPT',  // Carriage Paid To
+    'CIP',  // Carriage and Insurance Paid to
+    'DAT',  // Delivered At Terminal
+    'DAP',  // Delivered At Place
+    'DDP',  // Delivered Duty Paid
+    'N/A',  // No Aplica
+]
+```
+
+**Uso en facturas:**
+```php
+$invoice = new Invoice([
+    'sell_clause' => 'FOB',  // Free On Board
+    // ... otros campos
+]);
+```
+
+### Modalidades de Venta (ModVenta)
+
+```php
+'sell_mode' => [
+    1,  // Régimen General
+    2,  // Consignación
+    3,  // Precio Revisable
+    4,  // Bienes propios a exclaves aduaneros
+    90, // Otras transacciones
+]
+```
+
+**Configuración por defecto:**
+```php
+$invoice = new Invoice([
+    'sell_mode' => 1,  // Régimen General
+    // ... otros campos
+]);
+```
+
+### Vías de Transporte (ViaTransp)
+
+```php
+'transport' => [
+    1, // Marítimo
+    2, // Aéreo
+    3, // Terrestre
+    9, // Otro
+]
+```
+
+## Configuración de Empresa
+
+### Datos Básicos
+<CardGroup cols={2}>
+  <Card title="Información Fiscal" icon="receipt">
+    RUT, razón social, domicilio fiscal
+  </Card>
+  <Card title="Configuración Contable" icon="calculator">
+    Moneda base, ejercicio fiscal, plan de cuentas
+  </Card>
+  <Card title="Parámetros Comerciales" icon="store">
+    Listas de precios, condiciones de pago
+  </Card>
+  <Card title="Certificados Digitales" icon="shield">
+    Configuración de firma electrónica
+  </Card>
+</CardGroup>
+
+### Modelo CompanySettings
+
+```php
+// Configuraciones específicas de empresa
+$settings = CompanySettings::where('company_id', 1)->first();
+
+// Configuraciones comunes
+$settings->fiscal_year_start = '2024-01-01';
+$settings->default_currency_id = 1;
+$settings->default_price_list_id = 1;
+$settings->electronic_invoice_enabled = true;
+$settings->auto_numbering_enabled = true;
+```
+
+## Configuración de Módulos
+
+### Habilitación de Funcionalidades
+
+```php
+// Verificar si un módulo está habilitado
+if (Module::isEnabled('electronic_invoicing')) {
+    // Procesar firma electrónica
+    $invoice->sign();
+}
+
+if (Module::isEnabled('multi_currency')) {
+    // Aplicar tipo de cambio
+    $invoice->applyExchangeRate();
+}
+```
+
+### Módulos Disponibles
+
+| Módulo | Descripción | Dependencias |
+|--------|-------------|--------------|
+| `electronic_invoicing` | Facturación electrónica | Certificados digitales |
+| `multi_currency` | Soporte multi-moneda | Cotizaciones actualizadas |
+| `inventory_control` | Control de inventario | Productos configurados |
+| `advanced_accounting` | Contabilidad avanzada | Plan de cuentas |
+| `customer_portal` | Portal de clientes | API habilitada |
+| `reporting_suite` | Suite de reportes | Permisos configurados |
+
+## Configuración de Facturación Electrónica
+
+### Certificados Digitales
+
+```php
+// Configuración de certificado por empresa
+$company = Company::find(1);
+$company->digital_certificate = file_get_contents('path/to/certificate.p12');
+$company->certificate_password = 'password_secreto';
+$company->certificate_expires_at = '2024-12-31';
+$company->save();
+```
+
+### Parámetros DGI (Uruguay)
+
+```php
+'dgi_settings' => [
+    'environment' => 'production', // 'testing' | 'production'
+    'webservice_url' => 'https://efactura.dgi.gub.uy/',
+    'company_rut' => '123456789012',
+    'certificate_path' => storage_path('certificates/company.p12'),
+    'timeout' => 30,
+    'retry_attempts' => 3,
+]
+```
+
+### Configuración por Ambiente
+
+#### Desarrollo
+```php
+'dgi_settings' => [
+    'environment' => 'testing',
+    'webservice_url' => 'https://efactura.testing.dgi.gub.uy/',
+    'debug_mode' => true,
+    'log_requests' => true,
+]
+```
+
+#### Producción
+```php
+'dgi_settings' => [
+    'environment' => 'production',
+    'webservice_url' => 'https://efactura.dgi.gub.uy/',
+    'debug_mode' => false,
+    'log_requests' => false,
+    'cache_responses' => true,
+]
+```
+
+## Configuración de Base de Datos
+
+### Conexiones Múltiples
+
+```php
+// config/database.php
+'connections' => [
+    'gw_main' => [
+        'driver' => 'mysql',
+        'host' => env('DB_GW_HOST', 'localhost'),
+        'database' => env('DB_GW_DATABASE', 'gw_main'),
+        'username' => env('DB_GW_USERNAME', 'user'),
+        'password' => env('DB_GW_PASSWORD', 'password'),
+    ],
+
+    'gw_reports' => [
+        'driver' => 'mysql',
+        'host' => env('DB_GW_REPORTS_HOST', 'localhost'),
+        'database' => env('DB_GW_REPORTS_DATABASE', 'gw_reports'),
+        'username' => env('DB_GW_REPORTS_USERNAME', 'user'),
+        'password' => env('DB_GW_REPORTS_PASSWORD', 'password'),
+    ],
+]
+```
+
+### Configuración de Modelos
+
+```php
+class Invoice extends Model
+{
+    // Usar conexión específica
+    protected $connection = 'gw_main';
+
+    // Configuración de cache
+    public $cacheFor = 3600; // 1 hora
+    public $cacheTags = ['invoices'];
+}
+```
+
+## Configuración de Cache
+
+### Estrategias de Cache
+
+```php
+// config/cache.php
+'stores' => [
+    'gw_invoices' => [
+        'driver' => 'redis',
+        'connection' => 'default',
+        'prefix' => 'gw_invoices:',
+    ],
+
+    'gw_reports' => [
+        'driver' => 'file',
+        'path' => storage_path('cache/gw_reports'),
+    ],
+]
+```
+
+### Cache en Modelos
+
+```php
+// Configuración por modelo
+class Customer extends Model
+{
+    use QueryCacheable;
+
+    public $cacheFor = 7200; // 2 horas
+    public $cacheTags = ['customers'];
+
+    // Cache invalidation
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::saved(function ($model) {
+            Cache::tags(['customers'])->flush();
+        });
+    }
+}
+```
+
+## Configuración de Colas
+
+### Queue Configuration
+
+```php
+// config/queue.php
+'connections' => [
+    'gw_invoices' => [
+        'driver' => 'database',
+        'table' => 'jobs',
+        'queue' => 'invoices',
+        'retry_after' => 300,
+        'failed_jobs_table' => 'failed_jobs',
+    ],
+
+    'gw_reports' => [
+        'driver' => 'redis',
+        'connection' => 'default',
+        'queue' => 'reports',
+        'retry_after' => 600,
+    ],
+]
+```
+
+### Jobs por Queue
+
+```php
+// Facturación electrónica
+dispatch(new SignInvoiceJob($invoice))->onQueue('invoices');
+
+// Generación de reportes
+dispatch(new GenerateReportJob($reportId))->onQueue('reports');
+
+// Actualizaciones de saldo
+dispatch(new UpdateBalanceJob($customerId))->onQueue('balances');
+```
+
+## Variables de Entorno
+
+### Archivo .env
+
+```bash
+# Base de datos principal
+DB_HOST=localhost
+DB_DATABASE=gw_database
+DB_USERNAME=gw_user
+DB_PASSWORD=secure_password
+
+# Facturación electrónica
+GW_DGI_ENVIRONMENT=production
+GW_DGI_WEBSERVICE_URL=https://efactura.dgi.gub.uy/
+GW_CERTIFICATE_PATH=/path/to/certificates
+GW_CERTIFICATE_PASSWORD=cert_password
+
+# Cache y performance
+GW_CACHE_ENABLED=true
+GW_CACHE_TTL=3600
+GW_QUEUE_ENABLED=true
+
+# API
+GW_API_RATE_LIMIT=600
+GW_API_TOKEN_TTL=3600
+
+# Logging
+GW_LOG_LEVEL=info
+GW_LOG_CHANNEL=stack
+GW_LOG_SLACK_WEBHOOK=https://hooks.slack.com/...
+
+# Desarrollo
+GW_DEBUG_MODE=false
+GW_LOG_SQL=false
+```
+
+## Configuración Regional
+
+### Localización
+
+```php
+// config/app.php
+'locale' => 'es',
+'fallback_locale' => 'en',
+'timezone' => 'America/Montevideo',
+
+// Formatos regionales
+'number_format' => [
+    'decimals' => 2,
+    'decimal_point' => ',',
+    'thousands_separator' => '.',
+],
+
+'currency_format' => [
+    'symbol' => '$',
+    'position' => 'before', // 'before' | 'after'
+    'space' => false,
+],
+
+'date_format' => [
+    'display' => 'd/m/Y',
+    'input' => 'Y-m-d',
+    'datetime' => 'd/m/Y H:i:s',
+],
+```
+
+### Archivos de Idioma
+
+```php
+// lang/es/lang.php
+return [
+    'plugin' => [
+        'name' => 'Gestión Web',
+        'description' => 'Sistema integral de gestión empresarial',
+    ],
+    'invoice' => [
+        'title' => 'Factura',
+        'number' => 'Número',
+        'date' => 'Fecha',
+        'customer' => 'Cliente',
+        'total' => 'Total',
+    ],
+    // ... más traducciones
+];
+```
+
+## Configuración de Seguridad
+
+### Permisos y Roles
+
+```php
+// plugin.yaml
+permissions:
+    gw-invoices-view:
+        label: 'Ver facturas'
+        tab: 'GW'
+    gw-invoices-create:
+        label: 'Crear facturas'
+        tab: 'GW'
+    gw-invoices-sign:
+        label: 'Firmar facturas electrónicamente'
+        tab: 'GW'
+        comment: 'Permiso crítico para firma electrónica'
+```
+
+### Validaciones de Seguridad
+
+```php
+class InvoiceController extends Controller
+{
+    public function __construct()
+    {
+        parent::__construct();
+
+        // Verificar permisos específicos
+        $this->middleware(function ($request, $next) {
+            if (!BackendAuth::getUser()->hasPermission('gw-invoices-view')) {
+                throw new ForbiddenException();
+            }
+            return $next($request);
+        });
+    }
+}
+```
+
+## Configuración de Performance
+
+### Optimizaciones de Base de Datos
+
+```php
+// config/database.php
+'connections' => [
+    'mysql' => [
+        'options' => [
+            PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true,
+            PDO::MYSQL_ATTR_INIT_COMMAND => 'SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO"',
+        ],
+        'strict' => false,
+        'engine' => 'InnoDB',
+        'charset' => 'utf8mb4',
+        'collation' => 'utf8mb4_unicode_ci',
+    ],
+]
+```
+
+### Configuración de Memory
+
+```php
+// Para comandos de consola
+ini_set('memory_limit', '2G');
+set_time_limit(0);
+
+// Para requests web
+ini_set('memory_limit', '512M');
+ini_set('max_execution_time', 300);
+```
+
+## Deployment y Configuración de Producción
+
+### Configuraciones Recomendadas
+
+```bash
+# Optimizaciones de producción
+composer install --no-dev --optimize-autoloader
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+
+# Variables de entorno de producción
+APP_ENV=production
+APP_DEBUG=false
+GW_DEBUG_MODE=false
+GW_LOG_SQL=false
+GW_CACHE_ENABLED=true
+```
+
+### Monitoreo y Logs
+
+```php
+// config/logging.php
+'channels' => [
+    'gw' => [
+        'driver' => 'stack',
+        'channels' => ['daily', 'slack'],
+    ],
+
+    'gw_invoices' => [
+        'driver' => 'daily',
+        'path' => storage_path('logs/gw-invoices.log'),
+        'level' => 'info',
+        'days' => 14,
+    ],
+]
+```
+
+## Mejores Prácticas
+
+<Tip>
+**Configuración por Ambiente**: Usa variables de entorno para configuraciones sensibles.
+</Tip>
+
+<Warning>
+**Certificados**: Mantén los certificados digitales seguros y con fechas de expiración controladas.
+</Warning>
+
+<Info>
+**Cache**: Configura estrategias de cache apropiadas para mejorar la performance.
+</Info>
+
+---
+
+Una configuración adecuada es fundamental para el correcto funcionamiento del sistema en diferentes ambientes y necesidades empresariales.

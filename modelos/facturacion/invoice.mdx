@@ -1,0 +1,439 @@
+---
+title: "Modelo Invoice"
+description: "Modelo principal para la gestión de facturas y comprobantes fiscales"
+---
+
+# Modelo Invoice
+
+El modelo `Invoice` es el núcleo del sistema de facturación del plugin PlanetaDelEste.GW. Representa todos los tipos de comprobantes fiscales y comerciales del sistema.
+
+## Información General
+
+- **Namespace**: `PlanetaDelEste\GW\Models\Invoice`
+- **Tabla**: `invoices`
+- **Clave Primaria**: `id`
+- **Timestamps**: Sí
+- **Soft Deletes**: Sí
+- **Auditable**: Sí
+
+## Propiedades Principales
+
+### Identificación y Referencias
+```php
+public int $id                      // ID único del comprobante
+public string $order_serial         // Serie del comprobante (A, B, C, etc.)
+public int|string $order_number     // Número del comprobante
+public string $transaction_id       // ID de transacción externa
+public string $uuid                 // Identificador único universal
+```
+
+### Relaciones Empresariales
+```php
+public int $company_id              // Empresa emisora
+public int $branch_id               // Sucursal emisora
+public int $customer_id             // Cliente receptor
+public int $customer_branch_id      // Sucursal del cliente
+public int $warehouse_id            // Almacén de origen
+```
+
+### Clasificación Fiscal
+```php
+public int $invoice_type_id         // Tipo de comprobante fiscal
+public int $invoice_movement_type_id // Tipo de movimiento comercial
+public int $invoice_group_id        // Grupo de comprobantes
+public string $status_dgi           // Estado ante DGI
+```
+
+### Información Comercial
+```php
+public int $currency_id             // Moneda del comprobante
+public float $rate                  // Tipo de cambio aplicado
+public int $price_list_id           // Lista de precios utilizada
+public bool $price_with_tax         // Precios incluyen impuestos
+public float $price_limit           // Límite de precio
+```
+
+### Fechas Importantes
+```php
+public Argon $created_at            // Fecha de creación
+public Argon $updated_at            // Última modificación
+public Argon $sign_at               // Fecha de firma electrónica
+public Argon $due_date              // Fecha de vencimiento
+public Argon $received_at           // Fecha de recepción
+public Argon $cancelled_at          // Fecha de anulación
+```
+
+### Información Fiscal Electrónica
+```php
+public string $cert                 // Certificado digital
+public string $qr                   // Código QR del comprobante
+public string $id_cae               // CAE (Código de Autorización Electrónica)
+public string $expiration_cae       // Vencimiento del CAE
+```
+
+### Estados y Configuración
+```php
+public bool $is_contingency         // Comprobante de contingencia
+public bool $is_cash                // Venta en efectivo
+public bool $is_service_export      // Exportación de servicios
+public bool $is_processed           // Procesado (solo facturas recibidas)
+public string $flag                 // Estado del comprobante
+public string $error_msg            // Mensaje de error
+```
+
+## Relaciones
+
+### Belongs To (Pertenece a)
+
+```php
+// Empresa emisora
+public function company(): BelongsTo
+{
+    return $this->belongsTo(Company::class);
+}
+
+// Sucursal emisora
+public function branch(): BelongsTo
+{
+    return $this->belongsTo(Branch::class);
+}
+
+// Cliente
+public function customer(): BelongsTo
+{
+    return $this->belongsTo(Customer::class);
+}
+
+// Tipo de comprobante
+public function invoice_type(): BelongsTo
+{
+    return $this->belongsTo(InvoiceType::class);
+}
+
+// Tipo de movimiento
+public function invoice_movement_type(): BelongsTo
+{
+    return $this->belongsTo(InvoiceMovementType::class);
+}
+
+// Moneda
+public function currency(): BelongsTo
+{
+    return $this->belongsTo(Currency::class);
+}
+```
+
+### Has Many (Tiene muchos)
+
+```php
+// Líneas de detalle
+public function positions(): HasMany
+{
+    return $this->hasMany(InvoicePosition::class);
+}
+
+// Referencias a otros comprobantes
+public function references(): HasMany
+{
+    return $this->hasMany(InvoiceReference::class);
+}
+
+// Métodos de pago
+public function payment_methods(): HasMany
+{
+    return $this->hasMany(InvoicePaymentMethod::class);
+}
+```
+
+### Has One (Tiene uno)
+
+```php
+// Datos planos para consultas rápidas
+public function flat(): HasOne
+{
+    return $this->hasOne(InvoiceFlat::class);
+}
+
+// Totales calculados
+public function totals(): HasOne
+{
+    return $this->hasOne(InvoiceTotals::class);
+}
+```
+
+### Morph Many (Polimórficas)
+
+```php
+// Descuentos aplicados
+public function discounts(): MorphMany
+{
+    return $this->morphMany(Discount::class, 'discountable');
+}
+
+// Movimientos de saldo
+public function balances(): MorphMany
+{
+    return $this->morphMany(Balance::class, 'balanceable');
+}
+```
+
+## Validaciones
+
+```php
+public $rules = [
+    'company_id' => 'required|integer|exists:companies,id',
+    'customer_id' => 'required|integer|exists:customers,id',
+    'invoice_type_id' => 'required|integer|exists:invoice_types,id',
+    'currency_id' => 'required|integer|exists:currencies,id',
+    'order_serial' => 'required|string|max:5',
+    'order_number' => 'required|integer|min:1',
+    'rate' => 'required|numeric|min:0',
+    'due_date' => 'nullable|date|after:created_at'
+];
+
+public $customMessages = [
+    'order_number.unique' => 'Ya existe un comprobante con este número y serie',
+    'due_date.after' => 'La fecha de vencimiento debe ser posterior a la fecha de emisión'
+];
+```
+
+## Scopes Disponibles
+
+### Por Estado
+```php
+// Facturas firmadas electrónicamente
+$invoices = Invoice::signed()->get();
+
+// Facturas pendientes
+$invoices = Invoice::pending()->get();
+
+// Facturas anuladas
+$invoices = Invoice::cancelled()->get();
+```
+
+### Por Tipo
+```php
+// Facturas de venta
+$invoices = Invoice::sales()->get();
+
+// Facturas de compra
+$invoices = Invoice::purchases()->get();
+
+// Notas de crédito
+$invoices = Invoice::creditNotes()->get();
+```
+
+### Por Fecha
+```php
+// Del período actual
+$invoices = Invoice::currentPeriod()->get();
+
+// Entre fechas
+$invoices = Invoice::betweenDates($from, $to)->get();
+
+// Del mes actual
+$invoices = Invoice::currentMonth()->get();
+```
+
+## Accessors y Mutators
+
+### Accessors (Getters)
+```php
+// Número completo del comprobante
+public function getFullNumberAttribute(): string
+{
+    return $this->order_serial . ' ' . str_pad($this->order_number, 8, '0', STR_PAD_LEFT);
+}
+
+// Estado formateado
+public function getStatusAttribute(): string
+{
+    return ucfirst($this->flag ?? 'draft');
+}
+
+// Total con impuestos
+public function getTotalWithTaxAttribute(): float
+{
+    return $this->positions->sum('total_with_tax');
+}
+```
+
+### Mutators (Setters)
+```php
+// Normalizar serie
+public function setOrderSerialAttribute($value): void
+{
+    $this->attributes['order_serial'] = strtoupper($value);
+}
+
+// Formatear descripción
+public function setDescriptionAttribute($value): void
+{
+    $this->attributes['description'] = trim($value);
+}
+```
+
+## Eventos del Modelo
+
+```php
+public function beforeCreate()
+{
+    // Generar número automático si no se especifica
+    if (!$this->order_number) {
+        $this->generateOrderNumber();
+    }
+
+    // Establecer tipo de cambio actual
+    if (!$this->rate && $this->currency_id) {
+        $this->setCurrentExchangeRate();
+    }
+}
+
+public function afterSave()
+{
+    // Actualizar datos planos
+    $this->updateFlatData();
+
+    // Recalcular totales
+    $this->recalculateTotals();
+}
+
+public function beforeDelete()
+{
+    // Validar que se puede eliminar
+    if ($this->is_signed) {
+        throw new ValidationException(['invoice' => 'No se puede eliminar un comprobante firmado']);
+    }
+}
+```
+
+## Métodos Principales
+
+### Gestión de Estado
+```php
+// Firmar comprobante electrónicamente
+public function sign(): bool
+{
+    return $this->processElectronicSignature();
+}
+
+// Anular comprobante
+public function cancel(string $reason = null): bool
+{
+    $this->cancelled_at = now();
+    $this->flag = 'cancelled';
+    $this->error_msg = $reason;
+    return $this->save();
+}
+
+// Verificar si está firmado
+public function isSigned(): bool
+{
+    return !empty($this->sign_at) && !empty($this->id_cae);
+}
+```
+
+### Cálculos
+```php
+// Calcular subtotal
+public function getSubtotal(): float
+{
+    return $this->positions->sum('subtotal');
+}
+
+// Calcular impuestos
+public function getTaxAmount(): float
+{
+    return $this->positions->sum('tax_amount');
+}
+
+// Calcular total
+public function getTotal(): float
+{
+    return $this->positions->sum('total');
+}
+```
+
+### Utilidades
+```php
+// Generar PDF
+public function generatePdf(): File
+{
+    return $this->pdfGenerator->generate($this);
+}
+
+// Enviar por email
+public function sendByEmail(string $email, array $options = []): bool
+{
+    return $this->emailService->send($this, $email, $options);
+}
+```
+
+## Ejemplos de Uso
+
+### Crear Nueva Factura
+```php
+$invoice = new Invoice([
+    'company_id' => 1,
+    'customer_id' => 100,
+    'invoice_type_id' => 1,
+    'currency_id' => 1,
+    'order_serial' => 'A',
+    'description' => 'Venta de productos'
+]);
+
+$invoice->save();
+
+// Agregar líneas de detalle
+$invoice->positions()->create([
+    'product_id' => 50,
+    'quantity' => 2,
+    'unit_price' => 100.00
+]);
+```
+
+### Consultar Facturas
+```php
+// Facturas del cliente
+$customerInvoices = Invoice::where('customer_id', 100)
+    ->with(['positions', 'customer'])
+    ->orderBy('created_at', 'desc')
+    ->get();
+
+// Facturas pendientes de firma
+$pendingInvoices = Invoice::pending()
+    ->whereNull('sign_at')
+    ->get();
+```
+
+### Procesar Firma Electrónica
+```php
+$invoice = Invoice::find(1);
+
+if ($invoice->sign()) {
+    // Firma exitosa
+    $invoice->generatePdf();
+    $invoice->sendByEmail($invoice->customer->email);
+} else {
+    // Error en firma
+    Log::error('Error al firmar factura: ' . $invoice->error_msg);
+}
+```
+
+## Consideraciones Especiales
+
+<Warning>
+**Facturas Firmadas**: Una vez firmada electrónicamente, una factura no puede ser modificada ni eliminada.
+</Warning>
+
+<Info>
+**Numeración**: El sistema maneja la numeración automática por serie y tipo de comprobante.
+</Info>
+
+<Tip>
+**Performance**: Usa el modelo `InvoiceFlat` para consultas que no requieren relaciones complejas.
+</Tip>
+
+---
+
+El modelo Invoice es fundamental en el sistema y debe manejarse con cuidado, especialmente en lo referente a la firma electrónica y la trazabilidad fiscal.
